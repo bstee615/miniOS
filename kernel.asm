@@ -80,6 +80,7 @@ pop ax
     push 0
     push ax
     mov [saved_sp], ax ; save sp internally.
+    sub word [saved_sp], 0x10 ; start NEAR the end of the stack, so that you can pop off all the registers.
     mov sp, [original_sp]
 
     ret
@@ -98,11 +99,9 @@ setup:
     mov cx, func2
     call start_thread
 
-    ; should start func1
-    mov sp, 0x700 ; end of stack 1
-    sub sp, 0x10 ; TEMPORARY!
-    mov word [saved_sp], 0x600 
-    sub word [saved_sp], 0x10 ; TEMPORARY!
+    ; should start func1. This should NOT be manual, especially once we have more than two tasks
+    mov sp, 0x700 - 0x10 ; end of stack 1
+    mov word [saved_sp], 0x600  - 0x10
     jmp first_yield
 
     ; should never get here.
