@@ -49,6 +49,8 @@ push ax
     int 0x10
 pop ax
 
+    ; I think this is the problem - in start_thread we change sp to the TOP of each stack,
+    ; so we're actually popping values from above stack 1.
     xchg sp, [saved_sp]
     ; restore second state context
     pop bp
@@ -71,8 +73,8 @@ push ax
 pop ax
     ; set up stack1.
     ; push instruction pointer for func1 to stack 1.
-    add ax, bx
     mov [original_sp], sp
+    add ax, bx
     mov sp, ax
 
     ; this is critical to switching between functions, I think.
@@ -99,25 +101,28 @@ setup:
 
     ; setup func1:
     mov ax, 0x500
-    mov bx, 256
+    mov bx, 0x100
     mov cx, func1
     call start_thread
     
     ; setup func2:
     mov ax, 0x600
-    mov bx, 256
+    mov bx, 0x100
     mov cx, func2
     call start_thread
 
-    ; start func1
+    ; should start func1
     mov sp, 0x700 ; end of stack 1
+    sub sp, 0x8 ; TEMPORARY!
     mov word [saved_sp], 0x600 
+    sub word [saved_sp], 0x8 ; TEMPORARY!
     jmp first_yield
 
     ; should never get here.
     mov ah, 0x0e
     mov al, '!'
     int 0x10
+
     ret
 
 section .data
