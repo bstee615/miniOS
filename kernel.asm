@@ -28,11 +28,6 @@ func2:
     jmp func2
 
 yield:
-push ax
-    mov ah, 0x0e
-    mov al, '4'
-    int 0x10
-pop ax
     ; save first state registers
     push ax
     push bx
@@ -43,11 +38,6 @@ pop ax
     push bp
     ; switch to second state context
 first_yield:
-push ax
-    mov ah, 0x0e
-    mov al, '3'
-    int 0x10
-pop ax
 
     ; I think this is the problem - in start_thread we change sp to the TOP of each stack,
     ; so we're actually popping values from above stack 1.
@@ -95,9 +85,6 @@ pop ax
     ret
 
 setup:
-    mov ah, 0x0e
-    mov al, '1'
-    int 0x10
 
     ; setup func1:
     mov ax, 0x500
@@ -113,9 +100,9 @@ setup:
 
     ; should start func1
     mov sp, 0x700 ; end of stack 1
-    sub sp, 0x8 ; TEMPORARY!
+    sub sp, 0x10 ; TEMPORARY!
     mov word [saved_sp], 0x600 
-    sub word [saved_sp], 0x8 ; TEMPORARY!
+    sub word [saved_sp], 0x10 ; TEMPORARY!
     jmp first_yield
 
     ; should never get here.
