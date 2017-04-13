@@ -1,0 +1,1 @@
+nasm -fbin -okernel.com kernel.asm && ..\dbd\dbd.exe .

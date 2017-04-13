@@ -15,15 +15,17 @@ main:
 
 
 func1:
-    mov ah, 0x0e
-    mov al, 'A'
-    int 0x10
+    mov dx, msg_taska
+    call puts
+    mov dx, padwithspaces
+    call puts
     call yield
     jmp func1
 func2:
-    mov ah, 0x0e
-    mov al, 'B'
-    int 0x10
+    mov dx, msg_taskb
+    call puts
+    mov dx, padwithspaces
+    call puts
     call yield
     jmp func2
 
@@ -111,6 +113,37 @@ setup:
 
     ret
 
+; Sly-ly ripped from Mr. J's lab 9
+; ---------------------------------------------------------------------
+; print NUL-terminated string from DS:DX to screen using BIOS (INT 10h)
+; takes NUL-terminated string pointed to by DS:DX
+; clobbers nothing
+; returns nothing
+puts:
+	push	ax
+	push	cx
+	push	si
+	
+	mov	ah, 0x0e
+	mov	cx, 1		; no repetition of chars
+	
+	mov	si, dx
+.loop:	mov	al, [si]
+	inc	si
+	cmp	al, 0
+	jz	.end
+	int	0x10
+	jmp	.loop
+.end:
+	pop	si
+	pop	cx
+	pop	ax
+	ret
+
+
 section .data
     saved_sp    dw 0
     original_sp dw 0
+    msg_taska   db "I am task A!", 0
+    msg_taskb   db "I am task B!", 0
+    padwithspaces   db "                                                                    ",0
