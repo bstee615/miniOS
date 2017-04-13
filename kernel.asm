@@ -38,12 +38,25 @@ yield:
     push di
     push si
     push bp
+
+    ; advance thread number
+    inc word [current_thread]
+    mov dx, [current_thread]
+    cmp dx, [num_threads]
+
+    jl first_yield
+    mov word [current_thread], 0
     ; switch to second state context
 first_yield:
-
     ; I think this is the problem - in start_thread we change sp to the TOP of each stack,
     ; so we're actually popping values from above stack 1.
-    xchg sp, [saved_sp]
+    mov ax, stack_pointer
+    mov bx, [current_thread]
+    add bx, bx
+    add ax, bx
+
+    xchg sp, ax
+
     ; restore second state context
     pop bp
     pop si
@@ -52,17 +65,14 @@ first_yield:
     pop cx
     pop bx
     pop ax
+
     ret
 
 ; ax is the location of the bottom of the stack.
 ; bx is stack size.
 ; cx is the location of the next function's first instruction.
 start_thread:
-push ax
-    mov ah, 0x0e
-    mov al, '2'
-    int 0x10
-pop ax
+
     ; set up stack1.
     ; push instruction pointer for func1 to stack 1.
     mov [original_sp], sp
@@ -81,10 +91,27 @@ pop ax
     push 0
     push 0
     push ax
-    mov [saved_sp], ax ; save sp internally.
+
+    cmp word [num_threads], 0
+    jne .not_first
+    sub ax, 0x10
+
+.not_first:
+    push bx
+    push cx
+    
+    mov cx, stack_pointer
+    mov bx, [num_threads]
+    add bx, bx
+    add cx, bx
+    mov cx, ax ; save sp internally.
+
+    pop cx
+    pop bx
+
     mov sp, [original_sp]
 
-    ; TODO: add functionality to sub 0x10 (16 bytes) from saved_sp starting point so that sp starts from the right place.
+    inc word [num_threads]
 
     ret
 
@@ -104,14 +131,14 @@ setup:
 
     ; should start func1. This should NOT be manual, especially once we have more than two tasks
     ; Maybe it could be manual once we add multiple (more than two stacks) functionality
-    mov sp, 0x700 - 0x10 ; end of stack 1
-    mov word [saved_sp], 0x600  - 0x10
     jmp first_yield
 
     ; should never get here.
     mov ah, 0x0e
     mov al, '!'
     int 0x10
+
+    mov word [current_thread], 0
 
     ret
 
@@ -144,8 +171,16 @@ puts:
 
 
 section .data
-    saved_sp    dw 0
+    ; more funcs
+    num_threads dw 0
+    current_thread  dw 0
+    stack_pointer times 32 dw 0
+
+    ; two funcs
     original_sp dw 0
     msg_taska   db "I am task A!", 0
     msg_taskb   db "I am task B!", 0
     padwithspaces   db "                                                                    ",0
+
+;section .bss
+ ;   stack_pointer: resb 64
