@@ -103,6 +103,7 @@ setup:
     call start_thread
 
     ; should start func1. This should NOT be manual, especially once we have more than two tasks
+    ; Maybe it could be manual once we add multiple (more than two stacks) functionality
     mov sp, 0x700 - 0x10 ; end of stack 1
     mov word [saved_sp], 0x600  - 0x10
     jmp first_yield
