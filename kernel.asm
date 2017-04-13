@@ -6,13 +6,13 @@ section .text
 
 ;-------------------------------------------------
 ;                       BUGS:
+; - line 55:  there is some issue with dynamically adding the right stack address to the stack. Getting closer.
 ;-------------------------------------------------
 
 main:
     ; set up thread 1
     ; set up thread 2
     call setup
-
 
 func1:
     mov dx, msg_taska
@@ -48,14 +48,13 @@ yield:
     mov word [current_thread], 0
     ; switch to second state context
 first_yield:
-    ; I think this is the problem - in start_thread we change sp to the TOP of each stack,
-    ; so we're actually popping values from above stack 1.
-    mov ax, stack_pointer
+
+    ; there is some issue with dynamically adding the right stack address to the stack.
+    ; Getting closer.
     mov bx, [current_thread]
     add bx, bx
-    add ax, bx
 
-    xchg sp, ax
+    xchg sp, [stack_pointer + bx]
 
     ; restore second state context
     pop bp
@@ -90,23 +89,20 @@ start_thread:
     push 0
     push 0
     push 0
-    push ax
 
-    cmp word [num_threads], 0
-    jne .not_first
+    ;cmp word [num_threads], 0
+    ;jne .not_first
+    
     sub ax, 0x10
 
 .not_first:
+    push ax
     push bx
-    push cx
     
-    mov cx, stack_pointer
     mov bx, [num_threads]
     add bx, bx
-    add cx, bx
-    mov cx, ax ; save sp internally.
+    mov [stack_pointer + bx], ax ; save sp internally.
 
-    pop cx
     pop bx
 
     mov sp, [original_sp]
@@ -116,7 +112,6 @@ start_thread:
     ret
 
 setup:
-
     ; setup func1:
     mov ax, 0x500
     mov bx, 0x100
@@ -129,8 +124,6 @@ setup:
     mov cx, func2
     call start_thread
 
-    ; should start func1. This should NOT be manual, especially once we have more than two tasks
-    ; Maybe it could be manual once we add multiple (more than two stacks) functionality
     jmp first_yield
 
     ; should never get here.
