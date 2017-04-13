@@ -82,8 +82,9 @@ pop ax
     push 0
     push ax
     mov [saved_sp], ax ; save sp internally.
-    sub word [saved_sp], 0x10 ; start NEAR the end of the stack, so that you can pop off all the registers.
     mov sp, [original_sp]
+
+    ; TODO: add functionality to sub 0x10 (16 bytes) from saved_sp starting point so that sp starts from the right place.
 
     ret
 
