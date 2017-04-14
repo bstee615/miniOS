@@ -28,6 +28,13 @@ func2:
     call puts
     call yield
     jmp func2
+func3:
+    mov dx, msg_taskc
+    call puts
+    mov dx, padwithspaces
+    call puts
+    call yield
+    jmp func3
 
 yield:
     ; save first state registers
@@ -40,12 +47,13 @@ yield:
     push bp
 
     ; advance thread number
-    inc word [current_thread]
-    mov dx, [current_thread]
-    cmp dx, [num_threads]
-
+    mov dx, [num_threads]
+    cmp dx, [current_thread]
     jl first_yield
     mov word [current_thread], 0
+.inc_word:
+    inc word [current_thread]
+
     ; switch to second state context
 first_yield:
 
@@ -71,7 +79,6 @@ first_yield:
 ; bx is stack size.
 ; cx is the location of the next function's first instruction.
 start_thread:
-
     ; set up stack1.
     ; push instruction pointer for func1 to stack 1.
     mov [original_sp], sp
@@ -91,12 +98,14 @@ start_thread:
     push 0
 
     ;cmp word [num_threads], 0
-    ;jne .not_first
+    ;ne .not_first
     
+    ; This ensures that when switching to this stack, the OS will pop register states from this stack and not the stack above.
     sub ax, 0x10
 
-.not_first:
+;.not_first:
     push ax
+
     push bx
     
     mov bx, [num_threads]
@@ -106,7 +115,6 @@ start_thread:
     pop bx
 
     mov sp, [original_sp]
-
     inc word [num_threads]
 
     ret
@@ -123,7 +131,15 @@ setup:
     mov bx, 0x100
     mov cx, func2
     call start_thread
+    
+    ; setup func3:
+    mov ax, 0x700
+    mov bx, 0x100
+    mov cx, func3
+    call start_thread
 
+    ; Have to manually set sp so that the stack pointer manager saves the right address for stack 2.
+    mov sp, 0x600 - 0x10
     jmp first_yield
 
     ; should never get here.
@@ -173,6 +189,7 @@ section .data
     original_sp dw 0
     msg_taska   db "I am task A!", 0
     msg_taskb   db "I am task B!", 0
+    msg_taskc   db "I am task C!", 0
     padwithspaces   db "                                                                    ",0
 
 ;section .bss
