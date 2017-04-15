@@ -35,6 +35,13 @@ func3:
     call puts
     call yield
     jmp func3
+func4:
+    mov dx, msg_taskd
+    call puts
+    mov dx, padwithspaces
+    call puts
+    call yield
+    jmp func4
 
 yield:
     ; save first state registers
@@ -46,14 +53,16 @@ yield:
     push si
     push bp
 
+    ; BUG: Task D executes twice consistently.
+
     ; advance thread number
     mov dx, [num_threads]
     cmp dx, [current_thread]
-    jl first_yield
+    je .zero ; if current_thread is equal to num_threads, set current_thread to 0.
+    inc word [current_thread] ; else increment and yield normally.
+    jmp first_yield
+.zero:
     mov word [current_thread], 0
-.inc_word:
-    inc word [current_thread]
-
     ; switch to second state context
 first_yield:
 
@@ -137,17 +146,25 @@ setup:
     mov bx, 0x100
     mov cx, func3
     call start_thread
+    
+    ; setup func3:
+    mov ax, 0x800
+    mov bx, 0x100
+    mov cx, func4
+    call start_thread
+
+    ; this is so that the comparison in yield between these two is easier.
+    sub word [num_threads], 2 ; make sure no tasks are added after this.
+    mov word [current_thread], 0
 
     ; Have to manually set sp so that the stack pointer manager saves the right address for stack 2.
-    mov sp, 0x600 - 0x10
+    mov sp, 0x900 - 0x10
     jmp first_yield
 
     ; should never get here.
     mov ah, 0x0e
     mov al, '!'
     int 0x10
-
-    mov word [current_thread], 0
 
     ret
 
@@ -190,7 +207,10 @@ section .data
     msg_taska   db "I am task A!", 0
     msg_taskb   db "I am task B!", 0
     msg_taskc   db "I am task C!", 0
+    msg_taskd   db "I am task D!", 0
     padwithspaces   db "                                                                    ",0
+
+    pause_execution dw 0
 
 ;section .bss
  ;   stack_pointer: resb 64
