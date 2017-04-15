@@ -53,9 +53,6 @@ yield:
     push si
     push bp
 
-    ; BUG: Task D executes twice consistently.
-
-    ; advance thread number
     mov dx, [num_threads]
     cmp dx, [current_thread]
     je .zero ; if current_thread is equal to num_threads, set current_thread to 0.
@@ -63,17 +60,14 @@ yield:
     jmp first_yield
 .zero:
     mov word [current_thread], 0
-    ; switch to second state context
-first_yield:
 
-    ; there is some issue with dynamically adding the right stack address to the stack.
-    ; Getting closer.
+    ; switch to next state context
+first_yield:
     mov bx, [current_thread]
     add bx, bx
-
     xchg sp, [stack_pointer + bx]
 
-    ; restore second state context
+    ; restore next state registers
     pop bp
     pop si
     pop di
@@ -81,23 +75,24 @@ first_yield:
     pop cx
     pop bx
     pop ax
-
+    ; jump into next state's function.
     ret
 
+; Task setup function: reserves a given amount of spack for a "partition" on the stack.
+; Order is:  ...top of stack|IP|REG|REG|REG|REG|REG|REG|LOCAL_SP|bottom of stack...
 ; ax is the location of the bottom of the stack.
 ; bx is stack size.
 ; cx is the location of the next function's first instruction.
+; Changes given ax, bx, and cx.
 start_thread:
-    ; set up stack1.
-    ; push instruction pointer for func1 to stack 1.
+    ; preserve original sp.
     mov [original_sp], sp
+    ; move stack to the end of desired function's reserved stack.
     add ax, bx
     mov sp, ax
 
-    ; this is critical to switching between functions, I think.
-    ; better work on it.
+    ; push instruction pointer for desired function.
     push cx
-
     ; make space for the 7 registers
     push 0
     push 0
@@ -105,29 +100,24 @@ start_thread:
     push 0
     push 0
     push 0
-
-    ;cmp word [num_threads], 0
-    ;ne .not_first
     
     ; This ensures that when switching to this stack, the OS will pop register states from this stack and not the stack above.
     sub ax, 0x10
-
-;.not_first:
+    ; push location of space reserved for registers.
     push ax
 
-    push bx
-    
+    ; save sp in the stack_pointer array.
     mov bx, [num_threads]
     add bx, bx
     mov [stack_pointer + bx], ax ; save sp internally.
-
-    pop bx
 
     mov sp, [original_sp]
     inc word [num_threads]
 
     ret
 
+; Initial setup function. Should be called once, then never return as it hands control over to task management.
+; This kills the registers
 setup:
     ; setup func1:
     mov ax, 0x500
@@ -160,11 +150,6 @@ setup:
     ; Have to manually set sp so that the stack pointer manager saves the right address for stack 2.
     mov sp, 0x900 - 0x10
     jmp first_yield
-
-    ; should never get here.
-    mov ah, 0x0e
-    mov al, '!'
-    int 0x10
 
     ret
 
