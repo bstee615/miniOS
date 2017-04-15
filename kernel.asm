@@ -10,35 +10,27 @@ section .text
 ;-------------------------------------------------
 
 main:
-    ; set up thread 1
-    ; set up thread 2
+    mov dx, boot_msg
+    call puts
     call setup
 
 func1:
     mov dx, msg_taska
-    call puts
-    mov dx, padwithspaces
     call puts
     call yield
     jmp func1
 func2:
     mov dx, msg_taskb
     call puts
-    mov dx, padwithspaces
-    call puts
     call yield
     jmp func2
 func3:
     mov dx, msg_taskc
     call puts
-    mov dx, padwithspaces
-    call puts
     call yield
     jmp func3
 func4:
     mov dx, msg_taskd
-    call puts
-    mov dx, padwithspaces
     call puts
     call yield
     jmp func4
@@ -189,11 +181,12 @@ section .data
 
     ; two funcs
     original_sp dw 0
-    msg_taska   db "I am task A!", 0
-    msg_taskb   db "I am task B!", 0
-    msg_taskc   db "I am task C!", 0
-    msg_taskd   db "I am task D!", 0
-    padwithspaces   db "                                                                    ",0
+    msg_taska   db "I am task A!", 13, 10, 0
+    msg_taskb   db "I am task B!", 13, 10, 0
+    msg_taskc   db "I am task C!", 13, 10, 0
+    msg_taskd   db "I am task D!", 13, 10, 0
+    ;padwithspaces   db "                                                                    ",0
+    boot_msg    db	"Successfully loaded kernel.", 13, 10, 0
 
     pause_execution dw 0
 
