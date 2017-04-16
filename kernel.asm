@@ -5,6 +5,11 @@ org 0x100
 section .text
 
 main:
+    ; Switch to 320x200 video mode (i.e. mode 13h)
+    ;mov ah, 0x00
+    ;mov al, 0x13
+    ;int 0x10
+
     ;mov dx, boot_msg
     ;call puts
     call setup
@@ -34,6 +39,13 @@ func5:
     call puts
     call yield
     jmp func5
+
+; Tentative ball bouncing graphic demo.
+; dx is the thread ID (num_threads in the kernel).
+;   This is used to compute which half of the screen the task will display on.
+ball:
+
+    jmp ball
 
 yield:
     ; save first state registers
