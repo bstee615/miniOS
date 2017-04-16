@@ -4,14 +4,9 @@ org 0x100
 
 section .text
 
-;-------------------------------------------------
-;                       BUGS:
-; - line 55:  there is some issue with dynamically adding the right stack address to the stack. Getting closer.
-;-------------------------------------------------
-
 main:
-    mov dx, boot_msg
-    call puts
+    ;mov dx, boot_msg
+    ;call puts
     call setup
 
 func1:
@@ -34,6 +29,11 @@ func4:
     call puts
     call yield
     jmp func4
+func5:
+    mov dx, msg_taske
+    call puts
+    call yield
+    jmp func5
 
 yield:
     ; save first state registers
@@ -45,10 +45,10 @@ yield:
     push si
     push bp
 
+    inc word [current_thread]
     mov dx, [num_threads]
     cmp dx, [current_thread]
     je .zero ; if current_thread is equal to num_threads, set current_thread to 0.
-    inc word [current_thread] ; else increment and yield normally.
     jmp first_yield
 .zero:
     mov word [current_thread], 0
@@ -57,7 +57,7 @@ yield:
 first_yield:
     mov bx, [current_thread]
     add bx, bx
-    xchg sp, [stack_pointer + bx]
+    mov sp, [stack_pointer + bx]
 
     ; restore next state registers
     pop bp
@@ -101,7 +101,7 @@ start_thread:
     ; save sp in the stack_pointer array.
     mov bx, [num_threads]
     add bx, bx
-    mov [stack_pointer + bx], ax ; save sp internally.
+    mov word [stack_pointer + bx], ax ; save sp internally.
 
     mov sp, [original_sp]
     inc word [num_threads]
@@ -129,18 +129,24 @@ setup:
     mov cx, func3
     call start_thread
     
-    ; setup func3:
+    ; setup func4:
     mov ax, 0x800
     mov bx, 0x100
     mov cx, func4
     call start_thread
+    
+    ; setup func5:
+    mov ax, 0x900
+    mov bx, 0x100
+    mov cx, func5
+    call start_thread
 
     ; this is so that the comparison in yield between these two is easier.
-    sub word [num_threads], 2 ; make sure no tasks are added after this.
+    ;sub word [num_threads], 1 ; make sure no tasks are added after this.
     mov word [current_thread], 0
 
     ; Have to manually set sp so that the stack pointer manager saves the right address for stack 2.
-    mov sp, 0x900 - 0x10
+    mov sp, 0x500 - 0x10
     jmp first_yield
 
     ret
@@ -185,6 +191,7 @@ section .data
     msg_taskb   db "I am task B!", 13, 10, 0
     msg_taskc   db "I am task C!", 13, 10, 0
     msg_taskd   db "I am task D!", 13, 10, 0
+    msg_taske   db "I am task E!", 13, 10, 0
     ;padwithspaces   db "                                                                    ",0
     boot_msg    db	"Successfully loaded kernel.", 13, 10, 0
 
