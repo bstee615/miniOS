@@ -1,6 +1,6 @@
 bits 16
 
-org 0x100
+org 0x0
 
 section .text
 
