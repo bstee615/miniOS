@@ -19,10 +19,14 @@ main:
 
     ret
 
+DEFAULT_DRAWCHAR_X equ 9
+DEFAULT_DRAWCHAR_Y equ 18
 
 take_function:
-    mov word [drawchar_x], 9
-    mov word [drawchar_y], 18
+    mov byte [drawchar_x], DEFAULT_DRAWCHAR_X
+    mov byte [drawchar_y], DEFAULT_DRAWCHAR_Y
+
+    mov si, x_field
 
 ; Loop for input, displaying characters, until user presses enter.
 .loop:
@@ -30,22 +34,46 @@ take_function:
     mov ah, 0x00
     int 0x16
 
-    ; If it's an arrow key, switch control.
-    ; TODO: switch control.
-
+    ; If it's 'X' or 'Y', switch control.
+    cmp al, 'x'
+    je .switchto_x
+    cmp al, 'y'
+    je .switchto_y
+    jmp .no_switch
+.switchto_y:
+    mov si, y_field
+    mov byte [drawchar_y], 19
+    mov dl, byte [si]
+    mov byte [drawchar_x], dl
+    add byte [drawchar_x], DEFAULT_DRAWCHAR_X
+    jmp .no_switch
+.switchto_x:
+    mov si, x_field
+    mov byte [drawchar_y], 18
+    mov dl, byte [si]
+    mov byte [drawchar_x], dl
+    add byte [drawchar_x], DEFAULT_DRAWCHAR_X
+    jmp .no_switch
+.no_switch:
     ; If it's a backspace, do the backspace thingy.
     cmp ah, 0x0e
     mov bl, 100
     jne .draw_normal
 ; if backspace go back one and draw a black square.
-    cmp word [x_field_chars], 0 ; if x_field_chars is 0, retry input.
+    cmp byte [si], 0 ; if x_field_chars is 0, retry input.
     jle .loop
 
     mov al, 219
     mov bl, 0
     dec byte [drawchar_x]
 
-    dec word [x_field_chars] ; decrement char count for x.
+    ; Replace the appropriate char with a 0.
+    add si, 4 ; si now points at index of next char to add.
+    mov byte [si], 0 ; char has been moved.
+    sub si, 4 ; si not points at the beginning of the struct.
+
+    dec byte [si] ; decrement char count for x.
+
     call draw_letter
     jmp .carryon
 .draw_normal:
@@ -53,20 +81,31 @@ take_function:
     cmp dh, 0 ; If dh is 0 (ah is not a digit), retry input.
     je .loop
 
-    cmp word [x_field_chars], 8 ; if x_field_chars is 0, retry input.
+    cmp word [si], 6 ; if x_field_chars is 0, retry input.
     jge .loop
 
     ; If ALL error-checking is clear, draw normally(whew)
     call draw_letter
-    inc word [x_field_chars] ; increment char count for x.
+    inc word [si] ; increment char count for x.
 
-    inc word [drawchar_x]
+    ; And then add the character to [si].
+    ; dx is now smashable.
+    mov dx, [si]
+    ; Replace the appropriate char with a 0.
+    add si, 4 ; si now points at index of next char to add.
+    mov byte [si], al ; char has been moved.
+    sub si, 4 ; si not points at the beginning of the struct.
+
+    inc byte [drawchar_x]
 .carryon:
 
     cmp ah, 0x1C
     jne .loop
 
     ret
+
+; TODO: Write a function that takes a field struct and returns
+;       its number value.
 
 ; Use this for number-checking input through int 0x10.
 ; Checks if the character in al is a digit.
@@ -188,7 +227,7 @@ setup_menu:
     inc word [drawchar_x]
     mov al, '['
     call draw_letter
-    add word [drawchar_x], 8
+    add word [drawchar_x], 6
     inc word [drawchar_x]
     mov al, ']'
     call draw_letter
@@ -208,7 +247,7 @@ setup_menu:
     inc word [drawchar_x]
     mov al, '['
     call draw_letter
-    add word [drawchar_x], 8
+    add word [drawchar_x], 6
     inc word [drawchar_x]
     mov al, ']'
     call draw_letter
@@ -395,7 +434,14 @@ setup_graph:
     ret
 
 section .data
-    x_field_chars   dw 0
+    ; Field struct: 
+    ; First word is number of chars (max 6), 
+    ; second word is order in sequence with other structs,
+    ; third, fourth, and fifth words are characters contained.
+    ; Sixth word is the resulting number, after conversion.
+    x_field         times 6 dw 0
+    
+    y_field         times 6 dw 0
 
     drawline_end    dw 0
     drawline_dir    dw 0

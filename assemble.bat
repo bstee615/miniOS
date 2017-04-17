@@ -1,1 +1,1 @@
-nasm -fbin -okernel.com kernel.asm && nasm -fbin -oboot.com boot.asm && mkfloppy.exe bootdisk.img boot.com kernel.com && ..\dbd\dbd.exe .
+nasm -fbin -okernel.com kernel.asm && nasm -fbin -ombr.com boot.asm && mkfloppy.exe bootdisk.img mbr.com kernel.com && ..\dbd\dbd.exe .
