@@ -5,10 +5,12 @@ org 0x100
 section .text
 
 main:
+	mov	ax, cs
+	mov	ds, ax
     ; Switch to 320x200 video mode (i.e. mode 13h)
-    ;mov ah, 0x00
-    ;mov al, 0x13
-    ;int 0x10
+    mov ah, 0x00
+    mov al, 0x13
+    int 0x10
 
     ;mov dx, boot_msg
     ;call puts
@@ -39,13 +41,6 @@ func5:
     call puts
     call yield
     jmp func5
-
-; Tentative ball bouncing graphic demo.
-; dx is the thread ID (num_threads in the kernel).
-;   This is used to compute which half of the screen the task will display on.
-ball:
-
-    jmp ball
 
 yield:
     ; save first state registers
@@ -173,11 +168,16 @@ puts:
 	push	ax
 	push	cx
 	push	si
+    push    bx
 	
 	mov	ah, 0x0e
 	mov	cx, 1		; no repetition of chars
 	
 	mov	si, dx
+
+    mov bh, 0
+    mov bl, 150
+
 .loop:	mov	al, [si]
 	inc	si
 	cmp	al, 0
@@ -185,10 +185,49 @@ puts:
 	int	0x10
 	jmp	.loop
 .end:
+    pop bx
 	pop	si
 	pop	cx
 	pop	ax
 	ret
+
+; Draws a 1-pixel-wide horizontal line across the screen.
+; ax is (drawline_x).
+; bx is (drawline_y).
+; cx is the endpoint (drawline_x or drawline_y).
+; dx is whether the line is horizontal (1) or vertical (0).
+; Make sure the endpoint is larger than the origin!
+;draw_line:
+;    mov word [drawline_x], ax
+;    mov word [drawline_y], bx
+;    mov word [drawline_end], cx
+;    mov word [drawline_dir], dx
+;.loop:
+;    cmp word [drawline_dir], 0
+;    je  .inc_y ; if drawline_dir == 0 inc drawline_x
+;               ; else inc drawline_x
+ ;   inc word [drawline_x]
+;    mov dx, word[drawline_x]
+;    cmp dx, word [drawline_end]
+;    je  .end
+;    jmp .continue
+;.inc_y:
+;    inc word [drawline_y]
+;    mov dx, word[drawline_y]
+;    cmp dx, word [drawline_end]
+;    je  .end
+;.continue:
+;    mov ah, 0x0c
+;    mov al, 100
+;    mov bx, [1]
+;    mov cx, [drawline_x]
+;    mov dx, [drawline_y]
+;    int 10h
+
+;    jmp .loop
+
+;.end:
+;    ret
 
 
 section .data
@@ -208,6 +247,11 @@ section .data
     boot_msg    db	"Successfully loaded kernel.", 13, 10, 0
 
     pause_execution dw 0
+
+    drawline_x  dw 0
+    drawline_y  dw 0
+    drawline_end  dw 0
+    drawline_dir  dw 0
 
 ;section .bss
  ;   stack_pointer: resb 64
