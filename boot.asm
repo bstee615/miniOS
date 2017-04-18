@@ -1,4 +1,3 @@
-; CpS 230 Lab 8: Benjamin J. Steenhoek (bstee615)
 ;---------------------------------------------------
 ; Bootloader that loads/runs a single-sector payload
 ; program from the boot disk.
@@ -13,16 +12,17 @@ section	.text
 ; to know this so it can generate correct absolute data references.
 org	0x7C00
 
+; First instruction: jump over initial data and start executing code
 start:	jmp	main
 
 ; Embedded data
-boot_msg    db	"CpS 230 Bootloading Lab", 13, 10
-name_msg    db	"by Benjamin Steenhoek", 13, 10, 0
+boot_msg    db	"CpS 230 Team Project: MiniOS", 13, 10
+name_msg    db	"by Jacob Brazeal and Benjamin Steenhoek", 13, 10, 0
 boot_disk   db	0		; Variable to store the number of the disk we boot from
 retry_msg   db	"Error reading payload from disk; retrying...", 13, 10, 0
 
 main:
-	;Set DS == CS (so data addressing is normal/easy)
+	; Set DS == CS (so data addressing is normal/easy)
     mov ax, cs
     mov ds, ax
 	; Save the boot disk number (we get it in register DL
@@ -35,6 +35,9 @@ main:
 	; Print the boot message/banner
 	mov dx, boot_msg
     call puts
+	; Prompt for a keypress.
+	mov ah, 0x00
+	int 0x16
 
 .retry:
 	; use BIOS raw disk I/O to load sector 2 from disk number <boot_disk> into memory at 0800:0000h (retry on failure)

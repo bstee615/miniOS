@@ -6,9 +6,11 @@ section .text
 
 main:
 
-    mov ah, 0x00
-    mov al, 0x13
+    mov ax, 0x0013
     int 0x10
+    
+    mov       ax, 0x0500      ;Set page #0
+    int       10H
 
     call setup_graph
     call setup_menu
@@ -18,8 +20,7 @@ main:
     ; TODO: After enter is pressed in take_function, print curvies.
 
     ; Switch back to text mode and return.
-    mov ah, 0x00
-    mov al, 0x00
+    mov ax, 0x0000
     int 0x10
 
     ret
@@ -27,12 +28,15 @@ main:
 INPUT_DEFAULT_X     equ 9
 INPUT_DEFAULT_Y     equ 18
 INPUT_MAX_DIGITS    equ 4
-Y_MAX_CHARS         equ 16
+
 take_function:
     mov byte [drawchar_x],   INPUT_DEFAULT_X
     mov byte [drawchar_y],   INPUT_DEFAULT_Y
 
+    mov si, x_field
     mov bl, 7
+    call draw_x
+    mov bl, 20
     call draw_y
 
 ; Loop for input, displaying characters, until user presses enter.
@@ -47,12 +51,10 @@ take_function:
     je .end_func
 
     ; If it's 'X' or 'Y', switch control.
+    cmp al, 'x'
+    je .switchto_x
     cmp al, 'y'
     je .switchto_y
-    cmp al, 'X'
-    je .switchto_Xscale
-    cmp al, 'Y'
-    je .switchto_Yscale
     jmp .no_switch
 .switchto_y:
     mov si, y_field
@@ -61,42 +63,23 @@ take_function:
     mov byte [drawchar_x], dl
     add byte [drawchar_x],   INPUT_DEFAULT_X
 
+    mov bl, 20
+    call draw_x
     mov bl, 7
     call draw_y
-    mov bl, 20
-    call draw_Xscale
-    mov bl, 20
-    call draw_Yscale
 
     jmp .no_switch
-.switchto_Xscale:
-    mov si, Xscale_field
+.switchto_x:
+    mov si, x_field
     mov byte [drawchar_y], INPUT_DEFAULT_Y
     mov dl, byte [si]
     mov byte [drawchar_x], dl
     add byte [drawchar_x],   INPUT_DEFAULT_X
 
+    mov bl, 7
+    call draw_x
     mov bl, 20
     call draw_y
-    mov bl, 7
-    call draw_Xscale
-    mov bl, 20
-    call draw_Yscale
-
-    jmp .no_switch
-.switchto_Yscale:
-    mov si, Yscale_field
-    mov byte [drawchar_y], INPUT_DEFAULT_Y
-    mov dl, byte [si]
-    mov byte [drawchar_x], dl
-    add byte [drawchar_x],   INPUT_DEFAULT_X
-
-    mov bl, 20
-    call draw_y
-    mov bl, 20
-    call draw_Xscale
-    mov bl, 7
-    call draw_Yscale
 
     jmp .no_switch
 .no_switch:
@@ -245,6 +228,38 @@ draw_line:
 .drawline_end:
     ret
 
+; print NUL-terminated string from DS:DX to screen using BIOS (INT 10h)
+; takes NUL-terminated string pointed to by DS:DX
+; clobbers nothing
+; returns nothing
+puts:
+	push	ax
+	push	cx
+	push	si
+    push    bx
+	
+	mov	ah, 0x0e
+	mov	cx, 1		; no repetition of chars
+	
+	mov	si, dx
+
+    mov bh, 0
+    mov bl, 150
+
+.loop:	mov	al, [si]
+	inc	si
+	cmp	al, 0
+	jz	.end
+	int	0x10
+	jmp	.loop
+.end:
+    pop bx
+	pop	si
+	pop	cx
+	pop	ax
+
+	ret
+
 ; Draws a character to the screen.
 ; This kills nothing.
 ; Set bl ahead of time if you want pretty colors.
@@ -273,112 +288,51 @@ draw_letter:
 
     ret
 
+draw_x:
+    ; X:[    ]
+    ; Preserve old drawchar coordinates.
+    push word [drawchar_x]
+    push word [drawchar_y]
+
+    mov word [drawchar_x], 6
+    mov word [drawchar_y], 18
+    mov al, 'X'
+    call draw_letter
+
+    inc word [drawchar_x]
+    mov al, ':'
+    call draw_letter
+
+    inc word [drawchar_x]
+    mov al, '['
+    call draw_letter
+    add word [drawchar_x], INPUT_MAX_DIGITS
+    inc word [drawchar_x]
+    mov al, ']'
+    call draw_letter
+
+    ; Restore old drawchar coordinates.
+    pop ax
+    mov word [drawchar_y], ax
+    pop ax
+    mov word [drawchar_x], ax
+    
+    ret
 draw_y:
     ; Y:[    ]
     ; Preserve old drawchar coordinates.
     push word [drawchar_x]
     push word [drawchar_y]
     
-    mov word [drawchar_x], 3
-    mov word [drawchar_y], 20
-    mov al, 'y'
-    call draw_letter
-
-    inc word [drawchar_x]
-    mov al, '='
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, ' '
-    call draw_letter
-
-    ; Restore old drawchar coordinates.
-    pop ax
-    mov word [drawchar_y], ax
-    pop ax
-    mov word [drawchar_x], ax
-
-    ret
-draw_Xscale:
-    ; Xscale:[    ]
-    ; Preserve old drawchar coordinates.
-    push word [drawchar_x]
-    push word [drawchar_y]
-
-    mov word [drawchar_x], 3
-    mov word [drawchar_y], 21
-    mov al, 'X'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, ' '
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 'S'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 'c'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 'a'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 'l'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 'e'
-    call draw_letter
-
-    inc word [drawchar_x]
-    mov al, ':'
-    call draw_letter
-
-    inc word [drawchar_x]
-    mov al, '['
-    call draw_letter
-    add word [drawchar_x], INPUT_MAX_DIGITS
-    inc word [drawchar_x]
-    mov al, ']'
-    call draw_letter
-
-    ; Restore old drawchar coordinates.
-    pop ax
-    mov word [drawchar_y], ax
-    pop ax
-    mov word [drawchar_x], ax
-    
-    ret
-draw_Yscale:
-    ; Yscale:[    ]
-    ; Preserve old drawchar coordinates.
-    push word [drawchar_x]
-    push word [drawchar_y]
-
-    mov word [drawchar_x], 3
-    mov word [drawchar_y], 22
+    mov word [drawchar_x], 6
+    mov word [drawchar_y], 19
     mov al, 'Y'
     call draw_letter
-    inc word [drawchar_x]
-    inc word [drawchar_x]
-    mov al, ' '
-    call draw_letter
-    mov al, 'S'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 'c'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 'a'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 'l'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 'e'
-    call draw_letter
 
     inc word [drawchar_x]
     mov al, ':'
     call draw_letter
-
+    
     inc word [drawchar_x]
     mov al, '['
     call draw_letter
@@ -392,28 +346,22 @@ draw_Yscale:
     mov word [drawchar_y], ax
     pop ax
     mov word [drawchar_x], ax
-    
+
     ret
 
 setup_menu:
-    ; Draw fields
     mov bl, 7
+    call draw_x
+    mov bl, 20
     call draw_y
-    mov bl, 20
-    call draw_Xscale
-    mov bl, 20
-    call draw_Yscale
-
-    ; One Time Only: Underline the hotkeys for each field. (shoutout to Jake for this)
-
 
     ; Graph It!
     ; change drawline_color to dark blue
     mov word [drawline_color], 1;104
     ; draw title text
     mov bl, 1
-    mov word [drawchar_x], 6
-    mov word [drawchar_y], 18
+    mov word [drawchar_x], 16
+    mov word [drawchar_y], 1
     mov al, 'G'
     call draw_letter
     inc word [drawchar_x]
@@ -442,182 +390,150 @@ setup_menu:
     call draw_letter
 
     ret
-
-GRAPH_X_BOUND equ 160
-GRAPH_Y_BOUND equ 140
 setup_graph:
 
     mov byte [drawline_color], 1
     ; draw outline box
-    mov ax, 0
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 40
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, 0
-    mov bx, GRAPH_Y_BOUND
-    mov cx, GRAPH_X_BOUND
+    mov ax, 40
+    mov bx, 140
+    mov cx, 280
     mov dx, 1
     call draw_line
-    mov ax, GRAPH_X_BOUND
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 280
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, 0
-    mov bx, 0
-    mov cx, GRAPH_X_BOUND
+    mov ax, 40
+    mov bx, 20
+    mov cx, 280
     mov dx, 1
     call draw_line
 
     ; change drawline_color to light blue
     mov byte [drawline_color], 78
     ; draw vertical intermediate graph lines
-    mov ax, GRAPH_X_BOUND - 10
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 265
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, GRAPH_X_BOUND - 20
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 250
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, GRAPH_X_BOUND - 30
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 235
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, GRAPH_X_BOUND - 40
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 220
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, GRAPH_X_BOUND - 50
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 205
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, GRAPH_X_BOUND - 60
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 190
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, GRAPH_X_BOUND - 70
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 175
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
 
-    mov ax, GRAPH_X_BOUND - 90
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 145
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, GRAPH_X_BOUND - 100
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 130
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, GRAPH_X_BOUND - 110
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 115
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, GRAPH_X_BOUND - 120
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 100
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, GRAPH_X_BOUND - 130
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 85
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, GRAPH_X_BOUND - 140
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 70
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, GRAPH_X_BOUND - 150
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    mov ax, 55
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
 
     ; draw horizontal intermediate graph lines
-    mov ax, 0
-    mov bx, GRAPH_Y_BOUND - 130
-    mov cx, GRAPH_X_BOUND
+    mov ax, 40
+    mov bx, 35
+    mov cx, 280
     mov dx, 1
     call draw_line
-    mov ax, 0
-    mov bx, GRAPH_Y_BOUND - 120
-    mov cx, GRAPH_X_BOUND
+    mov ax, 40
+    mov bx, 50
+    mov cx, 280
     mov dx, 1
     call draw_line
-    mov ax, 0
-    mov bx, GRAPH_Y_BOUND - 110
-    mov cx, GRAPH_X_BOUND
-    mov dx, 1
-    call draw_line
-    mov ax, 0
-    mov bx, GRAPH_Y_BOUND - 100
-    mov cx, GRAPH_X_BOUND
-    mov dx, 1
-    call draw_line
-    mov ax, 0
-    mov bx, GRAPH_Y_BOUND - 90
-    mov cx, GRAPH_X_BOUND
-    mov dx, 1
-    call draw_line
-    mov ax, 0
-    mov bx, GRAPH_Y_BOUND - 80
-    mov cx, GRAPH_X_BOUND
+    mov ax, 40
+    mov bx, 65
+    mov cx, 280
     mov dx, 1
     call draw_line
 
-    mov ax, 0
-    mov bx, GRAPH_Y_BOUND - 60
-    mov cx, GRAPH_X_BOUND
+    mov ax, 40
+    mov bx, 95
+    mov cx, 280
     mov dx, 1
     call draw_line
-    mov ax, 0
-    mov bx, GRAPH_Y_BOUND - 50
-    mov cx, GRAPH_X_BOUND
+    mov ax, 40
+    mov bx, 110
+    mov cx, 280
     mov dx, 1
     call draw_line
-    mov ax, 0
-    mov bx, GRAPH_Y_BOUND - 40
-    mov cx, GRAPH_X_BOUND
-    mov dx, 1
-    call draw_line
-    mov ax, 0
-    mov bx, GRAPH_Y_BOUND - 30
-    mov cx, GRAPH_X_BOUND
-    mov dx, 1
-    call draw_line
-    mov ax, 0
-    mov bx, GRAPH_Y_BOUND - 20
-    mov cx, GRAPH_X_BOUND
-    mov dx, 1
-    call draw_line
-    mov ax, 0
-    mov bx, GRAPH_Y_BOUND - 10
-    mov cx, GRAPH_X_BOUND
+    mov ax, 40
+    mov bx, 125
+    mov cx, 280
     mov dx, 1
     call draw_line
     
-    ; Split graph in quadrants
+    ; change drawline_color to white
     mov byte [drawline_color], 1
-    mov ax, GRAPH_X_BOUND / 2
-    mov bx, 0
-    mov cx, GRAPH_Y_BOUND
+    ; Split graph in quadrants
+    mov ax, 160
+    mov bx, 20
+    mov cx, 140
     mov dx, 0
     call draw_line
-    mov ax, 0
-    mov bx, GRAPH_Y_BOUND / 2
-    mov cx, GRAPH_X_BOUND
+    mov ax, 40
+    mov bx, 80
+    mov cx, 280
     mov dx, 1
     call draw_line
 
@@ -630,9 +546,9 @@ section .data
     ; second word is order in sequence with other structs,
     ; third and fourth words are characters contained.
     ; Fifth word is the resulting number, after conversion.
+    x_field         times 5 dw 0
+    
     y_field         times 5 dw 0
-    Xscale_field    times 5 dw 0
-    Yscale_field    times 5 dw 0
 
     drawline_end    dw 0
     drawline_dir    dw 0
@@ -640,5 +556,5 @@ section .data
     drawline_y      dw 0
     drawline_color  db 0
 
-    drawchar_x      db 0
-    drawchar_y      db 0
+    drawchar_x      db 5
+    drawchar_y      db 20
