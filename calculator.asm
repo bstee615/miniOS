@@ -24,15 +24,16 @@ main:
 
     ret
 
-INPUT_DEFAULT_X     equ 9
-INPUT_DEFAULT_Y     equ 18
+INPUT_DEFAULT_X     equ 5
+INPUT_DEFAULT_Y     equ 20
 INPUT_MAX_DIGITS    equ 4
-Y_MAX_CHARS         equ 16
+Y_MAX_CHARS         equ 12
 take_function:
     mov byte [drawchar_x],   INPUT_DEFAULT_X
     mov byte [drawchar_y],   INPUT_DEFAULT_Y
 
     mov bl, 7
+    mov si, y_field
     call draw_y
 
 ; Loop for input, displaying characters, until user presses enter.
@@ -40,57 +41,47 @@ take_function:
     ; Take input; keep input in ah for duration of loop.
     mov ah, 0x00
     int 0x16
-    
-    ; VVVVVV TODO VVVVVV
-    ; If it's 'Enter', return from this function.
-    cmp al, 0x00
-    je .end_func
 
-    ; If it's 'X' or 'Y', switch control.
+    ; If it's 'y' or 'X' or 'Y', switch control.
     cmp al, 'y'
     je .switchto_y
     cmp al, 'X'
     je .switchto_Xscale
     cmp al, 'Y'
     je .switchto_Yscale
+    ; else
     jmp .no_switch
 .switchto_y:
-    mov si, y_field
-    mov byte [drawchar_y], INPUT_DEFAULT_Y + 1
-    mov dl, byte [si]
-    mov byte [drawchar_x], dl
-    add byte [drawchar_x],   INPUT_DEFAULT_X
-
     mov bl, 7
     call draw_y
     mov bl, 20
     call draw_Xscale
     mov bl, 20
     call draw_Yscale
+
+    mov si, y_field
+    mov byte [drawchar_y], INPUT_DEFAULT_Y
+    mov dl, byte [si]
+    mov byte [drawchar_x], dl
+    add byte [drawchar_x], INPUT_DEFAULT_X
 
     jmp .no_switch
 .switchto_Xscale:
-    mov si, Xscale_field
-    mov byte [drawchar_y], INPUT_DEFAULT_Y
-    mov dl, byte [si]
-    mov byte [drawchar_x], dl
-    add byte [drawchar_x],   INPUT_DEFAULT_X
-
     mov bl, 20
     call draw_y
     mov bl, 7
     call draw_Xscale
     mov bl, 20
     call draw_Yscale
+
+    mov si, Xscale_field
+    mov byte [drawchar_y], INPUT_DEFAULT_Y + 1
+    mov dl, byte [si]
+    mov byte [drawchar_x], dl
+    add byte [drawchar_x], INPUT_DEFAULT_X + 7
 
     jmp .no_switch
 .switchto_Yscale:
-    mov si, Yscale_field
-    mov byte [drawchar_y], INPUT_DEFAULT_Y
-    mov dl, byte [si]
-    mov byte [drawchar_x], dl
-    add byte [drawchar_x],   INPUT_DEFAULT_X
-
     mov bl, 20
     call draw_y
     mov bl, 20
@@ -98,14 +89,22 @@ take_function:
     mov bl, 7
     call draw_Yscale
 
+    mov si, Yscale_field
+    mov byte [drawchar_y], INPUT_DEFAULT_Y + 2
+    mov dl, byte [si]
+    mov byte [drawchar_x], dl
+    add byte [drawchar_x], INPUT_DEFAULT_X + 7
+
     jmp .no_switch
+
 .no_switch:
     ; If it's a backspace, do the backspace thingy.
     cmp ah, 0x0e
     mov bl, 100
     jne .draw_normal
-; if backspace go back one and draw a black square.
-    cmp byte [si], 0 ; if x_field_chars is 0, retry input.
+
+    ; if backspace go back one and draw a black square.
+    cmp byte [si], 0 ; if field_chars is 0, retry input.
     jle .loop
 
     mov al, 219
@@ -117,7 +116,7 @@ take_function:
     mov byte [si], 0 ; char has been moved.
     sub si, 4 ; si not points at the beginning of the struct.
 
-    dec byte [si] ; decrement char count for x.
+    dec byte [si] ; decrement char count.
 
     call draw_letter
     jmp .carryon
@@ -125,16 +124,23 @@ take_function:
     call is_digit
     cmp dh, 0 ; If dh is 0 (ah is not a digit), retry input.
     je .loop
+    ; dx is now smashable.
 
-    cmp word [si], INPUT_MAX_DIGITS ; if x_field_chars is above INPUT_MAX_DIGITS, retry input.
+    cmp si, y_field
+    je .is_on_y
+.not_on_y:
+    cmp byte [si], INPUT_MAX_DIGITS ; if field_chars is above INPUT_MAX_DIGITS, retry input.
+    jmp .compare
+.is_on_y:
+    cmp byte [si], Y_MAX_CHARS      ; if field_chars is above Y_MAX_CHARS, retry input.
+.compare:
     jge .loop
 
     ; If ALL error-checking is clear, draw normally(whew)
     call draw_letter
-    inc word [si] ; increment char count for x.
+    inc byte [si] ; increment char count.
 
-    ; And then add the character to [si].
-    ; dx is now smashable.
+    ; And then add the character to [si]:
     mov dx, [si]
     ; Replace the appropriate char with a 0.
     add si, 4 ; si now points at index of next char to add.
@@ -301,97 +307,98 @@ draw_y:
 draw_Xscale:
     ; Xscale:[    ]
     ; Preserve old drawchar coordinates.
-    push word [drawchar_x]
-    push word [drawchar_y]
+    mov ah, byte [drawchar_x]
+    mov al, byte [drawchar_y]
+    push ax
 
-    mov word [drawchar_x], 3
-    mov word [drawchar_y], 21
+    mov byte [drawchar_x], 3
+    mov byte [drawchar_y], 21
     mov al, 'X'
     call draw_letter
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
     mov al, ' '
     call draw_letter
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
     mov al, 'S'
     call draw_letter
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
     mov al, 'c'
     call draw_letter
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
     mov al, 'a'
     call draw_letter
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
     mov al, 'l'
     call draw_letter
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
     mov al, 'e'
     call draw_letter
 
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
     mov al, ':'
     call draw_letter
 
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
     mov al, '['
     call draw_letter
-    add word [drawchar_x], INPUT_MAX_DIGITS
-    inc word [drawchar_x]
+    add byte [drawchar_x], INPUT_MAX_DIGITS
+    inc byte [drawchar_x]
     mov al, ']'
     call draw_letter
 
     ; Restore old drawchar coordinates.
     pop ax
-    mov word [drawchar_y], ax
-    pop ax
-    mov word [drawchar_x], ax
+    mov byte [drawchar_y], al
+    mov byte [drawchar_x], ah
     
     ret
 draw_Yscale:
+
     ; Yscale:[    ]
     ; Preserve old drawchar coordinates.
-    push word [drawchar_x]
-    push word [drawchar_y]
+    mov ah, byte [drawchar_x]
+    mov al, byte [drawchar_y]
+    push ax
 
-    mov word [drawchar_x], 3
-    mov word [drawchar_y], 22
+    mov byte [drawchar_x], 3
+    mov byte [drawchar_y], 22
     mov al, 'Y'
     call draw_letter
-    inc word [drawchar_x]
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
+    inc byte [drawchar_x]
     mov al, ' '
     call draw_letter
     mov al, 'S'
     call draw_letter
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
     mov al, 'c'
     call draw_letter
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
     mov al, 'a'
     call draw_letter
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
     mov al, 'l'
     call draw_letter
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
     mov al, 'e'
     call draw_letter
 
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
     mov al, ':'
     call draw_letter
 
-    inc word [drawchar_x]
+    inc byte [drawchar_x]
     mov al, '['
     call draw_letter
-    add word [drawchar_x], INPUT_MAX_DIGITS
-    inc word [drawchar_x]
+    add byte [drawchar_x], INPUT_MAX_DIGITS
+    inc byte [drawchar_x]
     mov al, ']'
     call draw_letter
 
     ; Restore old drawchar coordinates.
     pop ax
-    mov word [drawchar_y], ax
-    pop ax
-    mov word [drawchar_x], ax
+    mov byte [drawchar_y], al
+    mov byte [drawchar_x], ah
     
     ret
 
@@ -626,13 +633,14 @@ setup_graph:
 
 section .data
     ; Field struct: 
-    ; First word is number of chars (max 6), 
+    ; First word is number of chars (max 4), 
     ; second word is order in sequence with other structs,
     ; third and fourth words are characters contained.
     ; Fifth word is the resulting number, after conversion.
-    y_field         times 5 dw 0
     Xscale_field    times 5 dw 0
     Yscale_field    times 5 dw 0
+    ; y field is structured similarly but can hold 16 characters.
+    y_field         times 11 dw 0
 
     drawline_end    dw 0
     drawline_dir    dw 0
