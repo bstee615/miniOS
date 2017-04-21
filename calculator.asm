@@ -121,21 +121,40 @@ take_function:
     call draw_letter
     jmp .carryon
 .draw_normal:
-    call is_digit
-    cmp dh, 0 ; If dh is 0 (ah is not a digit), retry input.
-    je .loop
-    ; dx is now smashable.
-
     cmp si, y_field
     je .is_on_y
 .not_on_y:
     cmp byte [si], INPUT_MAX_DIGITS ; if field_chars is above INPUT_MAX_DIGITS, retry input.
+    jge .loop
+
+    call is_digit
+    cmp dh, 0 ; If dh is 0 (ah is not a digit), retry input.
+    je .loop
+
     jmp .compare
 .is_on_y:
     cmp byte [si], Y_MAX_CHARS      ; if field_chars is above Y_MAX_CHARS, retry input.
-.compare:
     jge .loop
 
+    call is_digit
+    cmp dh, 1 ; If dh is 1 (ah is a digit), skip other tests.
+    je .compare
+
+    cmp al, 'x'
+    je .compare
+    cmp al, '+'
+    je .compare
+    cmp al, '-'
+    je .compare
+    cmp al, '*'
+    je .compare
+    cmp al, '/'
+    je .compare
+    cmp al, ' '
+    je .compare
+    
+    jmp .loop
+.compare:
     ; If ALL error-checking is clear, draw normally(whew)
     call draw_letter
     inc byte [si] ; increment char count.
