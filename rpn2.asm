@@ -13,6 +13,8 @@ main:
 	
 	call _execute_rpn
 	
+	ret
+	
 ; cx is value
 _execute_rpn:
 
@@ -32,11 +34,9 @@ _execute_rpn:
 	mov word [cur_index], di
 	
 	mov bx,ax
-	
-	mov	ah, 0x0e
-	mov al, bl
-	int 0x10
-	
+
+	mov byte [char_rem], bl
+		
 	cmp 	bl, 0
 	jl		.endloop		
 	
@@ -47,7 +47,6 @@ _execute_rpn:
 	jb      .ops
 	cmp		bl, byte '9'
 	ja      .ops
-
 	
 	sub		bl, byte '0'	
 	
@@ -92,18 +91,19 @@ _execute_rpn:
 
 	jmp		.hazUGotANumber
 .opsin:
-
-	cmp		bx, 'x'
+	
+	mov bl, byte [char_rem]	
+	cmp		bl, 'x'
 	je		.opsX
-	cmp		bx, '+'
+	cmp		bl, '+'
 	je		.opsPlus
-	cmp		bx, '-'
+	cmp		bl, '-'
 	je		.opsMinus
-	cmp		bx, '*'
+	cmp		bl, '*'
 	je		.opsMul
-	cmp		bx, '/'
+	cmp		bl, '/'
 	je		.opsDiv
-	cmp		bx, '~'
+	cmp		bl, '~'
 	je		.opsNeg
 	
 	jmp .topLoop
@@ -114,12 +114,6 @@ _execute_rpn:
 	jmp .topLoop
 	
 .opsPlus:
-	mov	ah, 0x0e
-	mov al, 'P'
-	int 0x10
-
-
-
 
 	call	_pop_stack
 	mov		cx, ax
@@ -251,9 +245,6 @@ _rpn_get_char:
 ; cx is what to push
 _push_stack: 
 		
-		mov ah, 0x0e
-		mov al, '!'
-		int 0x10
 		; [bp+8]   == what to push
 		mov   ax, word [int_top_stack]
 		
@@ -339,7 +330,7 @@ _print_stack:
 		push bx
 		push cx
 		push dx
-		
+		push di
 		call	_pop_stack
 		mov    bx, ax
 		push ax
@@ -349,6 +340,7 @@ _print_stack:
 
 		mov dx, bx
 		
+		mov di, 0
 		.beg:
 			rol dx,4 
 			mov cx, dx
@@ -359,13 +351,15 @@ _print_stack:
 			mov al, byte [digits + bx]
 			int 0x10
 			
-			cmp cx, 0
+			inc di
+			cmp di, 4
 			jne .beg			
 		
 		pop ax		
 		mov cx,	ax
 		call	_push_stack
 			
+		pop di
 		pop dx	
 		pop cx
 		pop bx
@@ -474,6 +468,7 @@ rpn_buff	times 100 db 0
 input_buff	times 32 db 0
 rpn_stack	times 32 dw 0
 str_err_pattern db "STACK UNDERFLOW",0x0e, 0x0a,0
+char_rem db 0
 
 ipt_len dw 0
 cur_index dw 0
