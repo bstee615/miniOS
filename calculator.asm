@@ -194,6 +194,7 @@ input_function:
     ret
 
 plot_function:
+    call setup_graph
     call draw_graphing
     ; TODO: Print 160 pixels, moving every pixel.
     ; This means loop 160 times.
