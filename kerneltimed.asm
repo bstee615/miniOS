@@ -1,6 +1,6 @@
 bits 16
 
-org 0x0
+org 0x100
 
 section .text
 
@@ -8,38 +8,91 @@ main:
 	mov	ax, cs
 	mov	ds, ax
     ; Switch to 320x200 video mode (i.e. mode 13h)
-    mov ah, 0x00
-    mov al, 0x13
-    int 0x10
+    ;mov ah, 0x00
+    ;mov al, 0x13
+    ;int 0x10
+    ;--------------------------------
+    ; Set up new interrupt 8 handler.
+    ;--------------------------------
+    
+    ; Where to find the INT 8 handler vector within the IVT [interrupt vector table]
+    IVT8_OFFSET_SLOT	equ	4 * 8			; Each IVT entry is 4 bytes; this is the 8th
+    IVT8_SEGMENT_SLOT	equ	IVT8_OFFSET_SLOT + 2	; Segment after Offset
+	; Set ES=0x0000 (segment of IVT)
+	mov	ax, 0x0000
+	mov	es, ax
+	
+	; TODO Install interrupt hook
+	; 0. disable interrupts (so we can't be...INTERRUPTED...)
+    cli
+	; 1. save current INT 8 handler address (segment:offset) into ivt8_offset and ivt8_segment
+    mov dx, [es:IVT8_OFFSET_SLOT]
+    mov word [ivt8_offset], dx
+    mov dx, [es:IVT8_SEGMENT_SLOT]
+    mov word [ivt8_segment], dx
+	; 2. set new INT 8 handler address (OUR code's segment:offset)
+    mov ax, timer_isr
+	mov word [es:IVT8_OFFSET_SLOT], ax
+	mov ax, cs
+    mov word [es:IVT8_SEGMENT_SLOT], ax
 
-    ;mov dx, boot_msg
-    ;call puts
+	; Start all the threads.
     call setup
+
+    ; this is so that the comparison in yield between these two is easier.
+    ;sub word [num_threads], 1 ; make sure no tasks are added after this.
+    mov word [current_thread], 0
+
+    ; Have to manually set sp so that the stack pointer manager saves the right address for stack 2.
+    mov sp, 0x500 - 0x10
+
+    ; Finally, enable interrupts (because you disabled them when setting up interrupts).
+    sti
+
+    jmp first_yield
+
+    ; The program should never get here.
+    ret
+
+; INT 8 Timer ISR (interrupt service routine)
+; cannot clobber anything; must CHAIN to original caller (for interrupt acknowledgment)
+; DS/ES == ???? (at entry, and must retain their original values at exit)
+timer_isr:
+    ; Registers used are saved in the function.
+    call yield
+	
+    push dx
+    mov dx, msg_timer
+    call puts
+    pop dx
+
+	; Chain (i.e., jump) to the original INT 8 handler
+	jmp	far [cs:ivt8_offset]	; Use CS as the segment here, since who knows what DS is now
 
 func1:
     mov dx, msg_taska
     call puts
-    call yield
+    ;call yield
     jmp func1
 func2:
     mov dx, msg_taskb
     call puts
-    call yield
+    ;call yield
     jmp func2
 func3:
     mov dx, msg_taskc
     call puts
-    call yield
+    ;call yield
     jmp func3
 func4:
     mov dx, msg_taskd
     call puts
-    call yield
+    ;call yield
     jmp func4
 func5:
     mov dx, msg_taske
     call puts
-    call yield
+    ;call yield
     jmp func5
 
 yield:
@@ -52,19 +105,19 @@ yield:
     push si
     push bp
 
-    inc word [current_thread]
-    mov dx, [num_threads]
-    cmp dx, [current_thread]
+    inc word [cs:current_thread]
+    mov dx, [cs:num_threads]
+    cmp dx, [cs:current_thread]
     je .zero ; if current_thread is equal to num_threads, set current_thread to 0.
     jmp first_yield
 .zero:
-    mov word [current_thread], 0
+    mov word [cs:current_thread], 0
 
     ; switch to next state context
 first_yield:
-    mov bx, [current_thread]
+    mov bx, [cs:current_thread]
     add bx, bx
-    mov sp, [stack_pointer + bx]
+    mov sp, [cs:stack_pointer + bx]
 
     ; restore next state registers
     pop bp
@@ -148,15 +201,8 @@ setup:
     mov cx, func5
     call start_thread
 
-    ; this is so that the comparison in yield between these two is easier.
-    ;sub word [num_threads], 1 ; make sure no tasks are added after this.
-    mov word [current_thread], 0
-
-    ; Have to manually set sp so that the stack pointer manager saves the right address for stack 2.
-    mov sp, 0x500 - 0x10
-    jmp first_yield
-
     ret
+
 
 ; Sly-ly ripped from Mr. J's lab 9
 ; ---------------------------------------------------------------------
@@ -205,15 +251,14 @@ section .data
     msg_taskc   db "I am task C!", 13, 10, 0
     msg_taskd   db "I am task D!", 13, 10, 0
     msg_taske   db "I am task E!", 13, 10, 0
+    msg_timer   db "I am the timer!", 13, 10, 0
     ;padwithspaces   db "                                                                    ",0
     boot_msg    db	"Successfully loaded kernel.", 13, 10, 0
 
     pause_execution dw 0
 
-    drawline_x  dw 0
-    drawline_y  dw 0
-    drawline_end  dw 0
-    drawline_dir  dw 0
+    ivt8_offset	dw	0
+    ivt8_segment	dw	0
 
 ;section .bss
  ;   stack_pointer: resb 64

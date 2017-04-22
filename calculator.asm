@@ -10,12 +10,17 @@ main:
     mov al, 0x13
     int 0x10
 
+    call rainbow
+
     call setup_graph
     call setup_menu
 
-    call take_function
+.ask_again:
+    call input_function
 
-    ; TODO: After enter is pressed in take_function, print curvies.
+    ; TODO: After enter is pressed in input_function, print curvies.
+    call plot_function
+    jmp .ask_again
 
     ; Switch back to text mode and return.
     mov ah, 0x00
@@ -28,19 +33,33 @@ INPUT_DEFAULT_X     equ 5
 INPUT_DEFAULT_Y     equ 20
 INPUT_MAX_DIGITS    equ 4
 Y_MAX_CHARS         equ 12
-take_function:
+input_function:
+    call draw_graphit
+
     mov byte [drawchar_x],   INPUT_DEFAULT_X
     mov byte [drawchar_y],   INPUT_DEFAULT_Y
 
     mov bl, 7
-    mov si, y_field
     call draw_y
+    mov bl, 20
+    call draw_Xscale
+    mov bl, 20
+    call draw_Yscale
 
-; Loop for input, displaying characters, until user presses enter.
+    mov si, y_field
+    mov byte [drawchar_y], INPUT_DEFAULT_Y
+    mov dl, byte [si]
+    mov byte [drawchar_x], dl
+    add byte [drawchar_x], INPUT_DEFAULT_X
+
+    ; Loop for input, displaying characters, until user presses enter.
 .loop:
     ; Take input; keep input in ah for duration of loop.
     mov ah, 0x00
     int 0x16
+
+    cmp ah, 0x1c
+    je .end_func
 
     ; If it's 'y' or 'X' or 'Y', switch control.
     cmp al, 'y'
@@ -171,6 +190,95 @@ take_function:
     jmp .loop
 
 .end_func:
+
+    ret
+
+plot_function:
+    call draw_graphing
+    ; TODO: Print 160 pixels, moving every pixel.
+    ; This means loop 160 times.
+    mov cx, 160
+    ; TODO: Use coordinates x = (-80,80) and y = (-80,80)
+    mov word [coordinate_x], -80
+    mov word [coordinate_y], 0
+    ; TODO: Calculate y for all pixels.
+.looper:
+    ; RPN Function should take a reference to a character array 
+    ; and the length of the array, calculate the result, and return a number.
+    ; This function should DEFINITELY NOT smash the char array.
+    ; Maybe just hardcode the length of the array since it'll just be used for y (12 characters).
+
+    ; TODO: Call RPN function to get the result of the equation(y_field character list).
+    ;       Place this in [drawchar_y].
+    ; TODO: Save cx so that the count doesn't get screwed up.
+    push cx
+    ; TODO: Print the pixel in the appropriate place.
+    ;AH = 0C
+    mov ah, 0x0c
+	;AL = color value (XOR'ED with current pixel if bit 7=1)
+    mov al, 0x26
+	;BH = page number, see VIDEO PAGES
+    mov bh, 0
+    ; TODO: Correct both x and y to (0,160); try to just add 80 each.
+    add word [coordinate_x], 80
+    add word [coordinate_y], 70
+	;CX = column number (zero based)
+    mov cx, word [coordinate_x]
+	;DX = row number (zero based)
+    mov dx, word [coordinate_y]
+    ; Don't forget to actually CALL int 0x10 :)
+    int 0x10
+    ; TODO: restore cx and coordinates.
+    pop cx
+    sub word [coordinate_x], 80
+    sub word [coordinate_y], 70
+
+    inc word [coordinate_x]
+    loop .looper
+
+    mov ah, 0x00
+    int 0x16
+
+    ret
+
+rainbow:
+    mov cx, 16000
+    mov al, 0
+    mov word [rainbow_x], 160
+    mov word [rainbow_y], 100
+
+.looparino:
+    push cx
+
+    ;AH = 0C
+    mov ah, 0x0c
+	;AL = color value (XOR'ED with current pixel if bit 7=1)
+
+    cmp al, 255
+    jne .color_continue
+    mov al, 0
+.color_continue:
+    inc al ; Inc al after because al can only go up to 255.
+	;BH = page number, see VIDEO PAGES
+    mov bh, 0
+	;CX = column number (zero based)
+    mov cx, word [rainbow_x]
+
+    inc word [rainbow_x]
+    cmp word [rainbow_x], 320
+    jne .x_continue ; If rainbow_x is 320, reset x and inc y.
+    mov word [rainbow_x], 160
+    inc word [rainbow_y]
+.x_continue:
+	;DX = row number (zero based)
+    mov dx, word [rainbow_y]
+    ; Don't forget to actually CALL int 0x10 :)
+    int 0x10
+
+    pop cx
+    
+    loop .looparino
+
     ret
 
 ; Takes a char array from a field struct pointed to by dx
@@ -298,6 +406,97 @@ draw_letter:
 
     ret
 
+draw_graphit:; Graph It!
+    ; change drawline_color to dark blue
+    mov word [drawline_color], 1;104
+    ; draw title text
+    mov bl, 0
+    mov word [drawchar_x], 5
+    mov word [drawchar_y], 18
+    mov al, 219
+    call draw_letter
+
+    inc word [drawchar_x]
+
+    mov bl, 1
+    mov al, 'G'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, 'r'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, 'a'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, 'p'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, 'h'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, ' '
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, 'I'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, 't'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, '!'
+    call draw_letter
+    inc word [drawchar_x]
+
+    mov bl, 0
+    mov word [drawchar_x], 15
+    mov word [drawchar_y], 18
+    mov al, 219
+    call draw_letter
+
+    ret
+
+draw_graphing:
+    ; change drawline_color to dark blue
+    mov word [drawline_color], 1;104
+    ; draw title text
+    mov bl, 1
+    mov word [drawchar_x], 5
+    mov word [drawchar_y], 18
+    mov al, 'G'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, 'r'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, 'a'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, 'p'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, 'h'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, 'i'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, 'n'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, 'g'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, '.'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, '.'
+    call draw_letter
+    inc word [drawchar_x]
+    mov al, '.'
+    call draw_letter
+
+    ret
+
 draw_y:
     ; Y:[    ]
     ; Preserve old drawchar coordinates.
@@ -313,8 +512,6 @@ draw_y:
     mov al, '='
     call draw_letter
     inc word [drawchar_x]
-    mov al, ' '
-    call draw_letter
 
     ; Restore old drawchar coordinates.
     pop ax
@@ -430,42 +627,9 @@ setup_menu:
     mov bl, 20
     call draw_Yscale
 
-    ; One Time Only: Underline the hotkeys for each field. (shoutout to Jake for this)
+    ; TODO: One Time Only: Underline the hotkeys for each field. (shoutout to Jake for this)
 
-
-    ; Graph It!
-    ; change drawline_color to dark blue
-    mov word [drawline_color], 1;104
-    ; draw title text
-    mov bl, 1
-    mov word [drawchar_x], 6
-    mov word [drawchar_y], 18
-    mov al, 'G'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 'r'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 'a'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 'p'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 'h'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, ' '
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 'I'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, 't'
-    call draw_letter
-    inc word [drawchar_x]
-    mov al, '!'
-    call draw_letter
+    call draw_graphit
 
     ret
 
@@ -669,3 +833,9 @@ section .data
 
     drawchar_x      db 0
     drawchar_y      db 0
+
+    coordinate_x    dw 0
+    coordinate_y    dw 0
+
+    rainbow_x       dw 0
+    rainbow_y       dw 0

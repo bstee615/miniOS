@@ -1,0 +1,1 @@
+nasm -fbin -otimed.com kerneltimed.asm && nasm -fbin -ombr.com boot.asm && mkfloppy.exe bootdisk.img mbr.com timed.com && ..\dbd\dbd.exe .
