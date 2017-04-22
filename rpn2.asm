@@ -11,6 +11,7 @@ main:
 	mov cx, 100
 	call gets
 	
+	mov cx, 3
 	call _execute_rpn
 	
 	ret
