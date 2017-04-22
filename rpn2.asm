@@ -13,12 +13,6 @@ main:
 	
 	call _execute_rpn
 	
-		
-	mov dx, rpn_buff
-	call puts
-	ret
-
-
 ; cx is value
 _execute_rpn:
 
@@ -37,70 +31,44 @@ _execute_rpn:
 	call _rpn_get_char
 	mov word [cur_index], di
 	
-	push di
-	push cx
-	push ax
-	
-	add di, 'a'
-	mov	ah, 0x0e
-	mov cx, di
-	mov al, cl
-	int 0x10
-	
-	pop ax
-	pop cx
-	pop di
-
-	
 	mov bx,ax
 	
 	mov	ah, 0x0e
 	mov al, bl
 	int 0x10
 	
-	cmp 	bx, 0
+	cmp 	bl, 0
 	jl		.endloop		
 	
-	cmp     bx, 'w'
+	cmp     bl, 'w'
 	je      .printItOut
 	
-	cmp		bx, word '0'
+	cmp		bl, byte '0'
 	jb      .ops
-	cmp		bx, word '9'
+	cmp		bl, byte '9'
 	ja      .ops
 
 	
-	sub		bx, word '0'	
+	sub		bl, byte '0'	
 	
 	mov		word [we_have_a_number_rejoice], word 1
-	;times 10
 
-
-	;push word [int_number]
-	mov ax, word 1
+	xor dx,dx
+	mov dl, bl
 	
-	;pop dx
-	mov		word [int_number], dx
-	;times 10
-
+	mov bx, dx
 	
 	mov		ax, word [int_number]		
 	
 	imul	ax,10
 
 	add		ax, bx
-
-
 	
 	mov		word [int_number],ax
-
 	
 	jmp 	.topLoop
 
 .hazUGotANumber:
-	mov	ah, 0x0e
-	mov al, 'H'
-	int 0x10
 
 	mov 	ax, 0
 	
@@ -124,9 +92,6 @@ _execute_rpn:
 
 	jmp		.hazUGotANumber
 .opsin:
-	mov	ah, 0x0e
-	mov al, 'S'
-	int 0x10
 
 	cmp		bx, 'x'
 	je		.opsX
@@ -377,8 +342,10 @@ _print_stack:
 		
 		call	_pop_stack
 		mov    bx, ax
-		
 		push ax
+		
+		
+		
 
 		mov dx, bx
 		
@@ -389,7 +356,6 @@ _print_stack:
 			mov	ah, 0x0e
 			
 			mov bx, cx
-			add bx, bx
 			mov al, byte [digits + bx]
 			int 0x10
 			
@@ -506,7 +472,7 @@ msg_prompt	db	"What is your name? ", 0
 msg_hello	db	"RPN Demo",10, 0
 rpn_buff	times 100 db 0
 input_buff	times 32 db 0
-rpn_stack	times 32 db 0
+rpn_stack	times 32 dw 0
 str_err_pattern db "STACK UNDERFLOW",0x0e, 0x0a,0
 
 ipt_len dw 0
