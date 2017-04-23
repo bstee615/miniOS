@@ -1,0 +1,1 @@
+nasm -fbin -ocalcnew.com calc.asm && ..\dbd\dbd.exe .

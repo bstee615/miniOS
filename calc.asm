@@ -10,7 +10,7 @@ main:
     mov al, 0x13
     int 0x10
 
-    call rainbow
+    ;call rainbow
 
     call setup_graph
     call setup_menu
@@ -182,11 +182,11 @@ input_function:
     inc byte [si] ; increment char count.
 
     ; And then add the character to [si]:
-    mov dx, [si]
+    movzx dx, [si]
     ; Replace the appropriate char with a 0.
-    add si, 4 ; si now points at index of next char to add.
+    add si, dx ; si now points at index of next char to add.
     mov byte [si], al ; char has been moved.
-    sub si, 4 ; si not points at the beginning of the struct.
+    sub si, dx ; si not points at the beginning of the struct.
 
     inc byte [drawchar_x]
 .carryon:
@@ -231,6 +231,9 @@ plot_function:
 	mov bx, 80
 	sub bx, word [coordinate_y]
 	mov word [coordinate_y], bx 
+
+    cmp word [coordinate_y], 80
+    ja .no_graph
 	    
     ; TODO: Print the pixel in the appropriate place.
     ;AH = 0C
@@ -843,7 +846,11 @@ setup_graph:
 ; returns value in ax
 _execute_rpn:
 
-	pusha
+    push si
+    push di
+    push bx
+    push cx
+    push dx
 	
 	mov word [int_cur_num], cx
 	
@@ -863,7 +870,7 @@ _execute_rpn:
 	mov byte [char_rem], bl
 		
 	cmp 	bl, 0
-	jl		.endloop		
+	je		.endloop		
 	
 	cmp     bl, 'w'
 	je      .printItOut
@@ -1046,12 +1053,22 @@ _execute_rpn:
 	
 	jmp .topLoop
 
-
 .endloop:
+    ;cmp word [we_have_a_number_rejoice], 1
+    ;jne .endfunc
+    ;mov cx, word [int_number]
+    ;call _push_stack
 
-	
-	popa
-	ret
+.endfunc:
+	call _pop_stack
+
+    pop dx
+    pop cx
+    pop bx
+    pop di
+    pop si
+
+    ret
 	
 ; dx is position in buffer
 ; returns ax = 0 if there is no more space in buffer
@@ -1059,7 +1076,7 @@ _execute_rpn:
 _rpn_get_char:
 	push bx
 	mov bx,di
-	mov ax, [rpn_buff + bx]
+	movzx ax, byte [rpn_buff + bx]
 
 	inc di
 	pop bx
@@ -1278,17 +1295,15 @@ gets:
 	pop	cx
 	pop	di
 	ret
-
-end:
-	call _pop_stack
 	
 ; copy y field data to rpn buffer
 copy_string_data:
 	pusha
+
 	mov dx, y_field
 	mov bx, rpn_buff
 	
-	mov di, 6
+	mov di, 1
 	.begcpy:
 		; address of y-field
 		mov bx, y_field
@@ -1298,11 +1313,13 @@ copy_string_data:
 		
 		; go to the right point in rpn
 		mov bx, rpn_buff
+        dec di
 		add bx, di
+        inc di
 		mov byte[bx], al
 		
 		inc di
-		cmp di, 22
+		cmp di, 16
 		jne .begcpy
 	
 	
@@ -1318,8 +1335,8 @@ section .data
     ; Fifth word is the resulting number, after conversion.
     Xscale_field    times 5 dw 0
     Yscale_field    times 5 dw 0
-    ; y field is structured similarly but can hold 16 characters.
-    y_field         times 11 dw 0
+    ; y field is structured similarly but can hold 12 characters.
+    y_field         times 9 dw 0
 
     drawline_end    dw 0
     drawline_dir    dw 0
