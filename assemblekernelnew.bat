@@ -1,0 +1,1 @@
+nasm -fbin -okernelnew.com kernelnew.asm && nasm -fbin -ombr.com boot.asm && mkfloppy.exe bootdisk.img mbr.com kernelnew.com && ..\dbd\dbd.exe .

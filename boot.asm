@@ -44,7 +44,7 @@ main:
 	;AH = 02
     mov ah, 0x02
 	;AL = number of sectors to read	(1-128 dec.)
-    mov al, 1
+    mov al, 6
 	;CH = track/cylinder number  (0-1023 dec., see below)
     mov ch, 0
 	;CL = sector number  (1-17 dec.)

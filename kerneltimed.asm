@@ -22,6 +22,9 @@ main:
 	mov	ax, 0x0000
 	mov	es, ax
 	
+	; Start all the threads.
+    call setup
+
 	; TODO Install interrupt hook
 	; 0. disable interrupts (so we can't be...INTERRUPTED...)
     cli
@@ -35,9 +38,6 @@ main:
 	mov word [es:IVT8_OFFSET_SLOT], ax
 	mov ax, cs
     mov word [es:IVT8_SEGMENT_SLOT], ax
-
-	; Start all the threads.
-    call setup
 
     ; this is so that the comparison in yield between these two is easier.
     ;sub word [num_threads], 1 ; make sure no tasks are added after this.
