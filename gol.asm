@@ -9,63 +9,75 @@ X_START equ 21
 Y_START equ 0
 Y_BOUND equ 25
 main:
-    mov ah, 0x00
-    mov al, 0x13
-    int 0x10
+	call print_grid
+ret
+print_grid:
+	push ax
+	mov ax, 0
+	
+	
+	.loop:
 
-    ;call gol_setup
+		mov bx, cells_array
+		add bx, ax
 
-    ; Move cursor
-    ;AH = 02
-    mov ah, 0x02
-	;BH = page number (0 for graphics modes)
-    mov bh, 0
-	;DH = row
-    mov dh, 0
-	;DL = column
-    mov dl, 20
-    int 0x10
+		cmp [bx], 1							
+		jne .nopr
+		
+		.pr:
+		
+		call dbl_index
+		push ax 
+		mov byte [row], cl
+		mov byte [col], dl
+		
+		mov ah, 0x13
+		mov al, 0x0
+		mov bh, 1
+		mov cx, 1
+		mov dh, byte [row]
+		mov dl, byte [row]
+		
+		push es
+		push bp
+		mov es, ds
+		mov bp, on
+		
+		int 0x10
+								
+		jmp .nxt:
+		.nopr:
 
-    ; Print
-    mov ah, 0x0a
-    mov al, 219
-    mov bl, 1
-    mov cx, 1
+		call dbl_index
+		push ax 
+		mov byte [row], cl
+		mov byte [col], dl
+		
+		mov ah, 0x13
+		mov al, 0x0
+		mov bh, 1
+		mov cx, 1
+		mov dh, byte [row]
+		mov dl, byte [row]
+		
+		push es
+		push bp
+		mov es, ds
+		mov bp, off
+		
+		int 0x10
+		
+		.nxt:	
+		pop ax
+		pop bp
+		pop es	
+		cmp ax,500
+		jne .loop
+		
+		pop ax
+	ret
+	
 
-    mov si, 0
-    
-    jmp end
-.looper:
-	call check_cells
-    ; Move cursor
-    mov ah, 0x02
-    ; bl will now contain either black or blue.
-    inc dl
-    cmp dl, X_BOUND
-    jl .normal_X
-    ; Else move cursor back to the start of the row and inc the row count.
-    mov dl, X_START
-    inc dh
-.normal_X:
-    cmp dh, Y_BOUND
-    jl .normal
-    ; Else move cursor back to the start of the game.
-    mov dl, X_START
-    mov dh, Y_START
-.normal:
-    int 0x10
-
-; Print
-    inc si
-    ;call survive
-
-    mov ah, 0x0a
-    int 0x10
-
-    jmp .looper
-
-gol_setup:
-    ret
 
 ; Tells whether a given cell in cells_array will live in next state.
 ; Index is si.
@@ -371,8 +383,8 @@ end:
 	
 section .data
     ; Theoretically organized into 25 lines of 20.
-    cells_array times 260 db 0
-    next_cells_array times 260 db 0
+    cells_array times 500 db 0
+    next_cells_array times 500 db 0
 
     left        db 0
     right       db 0
@@ -382,3 +394,10 @@ section .data
     topright    db 0
     bottomleft  db 0
     bottomright db 0
+    
+    
+    row db 0
+    col db 0
+    
+    on db "O",0
+    off db "X",0
