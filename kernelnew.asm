@@ -12,9 +12,9 @@ main:
     mov al, 0x13
     int 0x10
 
-    ;mov dx, boot_msg
-    ;call puts
     call setup
+
+    ret
 
 yield:
     ; save first state registers
@@ -111,7 +111,7 @@ setup:
     mov word [current_thread], 0
 
     ; Have to manually set sp so that the stack pointer manager saves the right address for stack 2.
-    mov sp, 0x1100 - 0x10
+    mov sp, 0x1300 - 0x10
     jmp first_yield
 
     ret
@@ -167,7 +167,6 @@ calculator:
 	
 	; copy input to calculator buffer
 	call copy_string_data
-	
     ; TODO: After enter is pressed in input_function, print curvies.
     call plot_function
     jmp .ask_again
@@ -346,8 +345,12 @@ input_function:
     ret
 
 plot_function:
-    call setup_graph
     call draw_graphing
+
+    ; If there's no input, then end the function.
+    cmp byte [y_field], 0
+    je .end_func
+
     ; TODO: Print 160 pixels, moving every pixel.
     ; This means loop 160 times.
     mov cx, 160
@@ -411,8 +414,12 @@ plot_function:
     inc word [coordinate_x]
     loop .looper
 
+.end_func:
+
     mov ah, 0x00
     int 0x16
+
+    call setup_graph
 
     ret
 
@@ -434,8 +441,9 @@ rainbow:
     cmp al, 255
     jne .color_continue
     mov al, 0
+    call yield
 .color_continue:
-    inc al ; Inc al after because al can only go up to 255.
+    ;inc al ; Inc al after because al can only go up to 255.
 	;BH = page number, see VIDEO PAGES
     mov bh, 0
 	;CX = column number (zero based)
@@ -444,11 +452,16 @@ rainbow:
     inc word [rainbow_x]
     cmp word [rainbow_x], 320
     jne .x_continue ; If rainbow_x is 320, reset x and inc y.
+    add al, 200
     mov word [rainbow_x], 160
     inc word [rainbow_y]
     cmp word [rainbow_y], 200
     jne .x_continue
+<<<<<<< HEAD
     mov word [rainbow_y], 0
+=======
+    mov word [rainbow_y], 100
+>>>>>>> caf8b80eeb04a74c9e5ff580b487df353a2d790a
 .x_continue:
 	;DX = row number (zero based)
     mov dx, word [rainbow_y]
@@ -457,7 +470,7 @@ rainbow:
 
     pop cx
     
-    loop .looparino
+    jmp .looparino
 
     ret
 
@@ -587,6 +600,8 @@ draw_letter:
     ret
 
 draw_graphit:; Graph It!
+    pusha
+
     ; change drawline_color to dark blue
     mov word [drawline_color], 1;104
     ; draw title text
@@ -633,9 +648,12 @@ draw_graphit:; Graph It!
     mov al, 219
     call draw_letter
 
+    popa 
     ret
 
 draw_graphing:
+    pusha
+
     ; change drawline_color to dark blue
     mov word [drawline_color], 1;104
     ; draw title text
@@ -675,9 +693,11 @@ draw_graphing:
     mov al, '.'
     call draw_letter
 
+    popa
     ret
 
 draw_y:
+    pusha
     ; Y:[    ]
     ; Preserve old drawchar coordinates.
     push word [drawchar_x]
@@ -699,8 +719,10 @@ draw_y:
     pop ax
     mov word [drawchar_x], ax
 
+    popa
     ret
 draw_Xscale:
+    pusha
     ; Xscale:[    ]
     ; Preserve old drawchar coordinates.
     mov ah, byte [drawchar_x]
@@ -747,9 +769,10 @@ draw_Xscale:
     mov byte [drawchar_y], al
     mov byte [drawchar_x], ah
     
+    popa
     ret
 draw_Yscale:
-
+    pusha
     ; Yscale:[    ]
     ; Preserve old drawchar coordinates.
     mov ah, byte [drawchar_x]
@@ -795,10 +818,11 @@ draw_Yscale:
     pop ax
     mov byte [drawchar_y], al
     mov byte [drawchar_x], ah
-    
+    popa
     ret
 
 setup_menu:
+    pusha
     ; Draw fields
     mov bl, 7
     call draw_y
@@ -811,12 +835,18 @@ setup_menu:
 
     call draw_graphit
 
+    popa
     ret
 
 GRAPH_X_BOUND equ 160
 GRAPH_Y_BOUND equ 140
 setup_graph:
+<<<<<<< HEAD
     ; Fill in the black parts of the graph
+=======
+    pusha
+
+>>>>>>> caf8b80eeb04a74c9e5ff580b487df353a2d790a
     mov ah, 0x02
     mov bh, 0
     mov dl, 0
@@ -1014,6 +1044,8 @@ setup_graph:
     mov dx, 1
     call draw_line
 
+    popa
+
     ret
 
 
@@ -1022,7 +1054,6 @@ setup_graph:
 ; cx is value
 ; returns value in ax
 _execute_rpn:
-
     push si
     push di
     push bx
