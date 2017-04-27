@@ -1,9 +1,11 @@
 bits 16
 
-org 0x0
+org 0x100
 
 section .text
 
+IVT8_OFFSET_SLOT	equ	4 * 8			; Each IVT entry is 4 bytes; this is the 8th
+IVT8_SEGMENT_SLOT	equ	IVT8_OFFSET_SLOT + 2	; Segment after Offset
 main:
 	mov	ax, cs
 	mov	ds, ax
@@ -12,9 +14,39 @@ main:
     mov al, 0x13
     int 0x10
 
-    ;mov dx, boot_msg
-    ;call puts
+    ; Set up timer interrupt
+    cli
+	; 1. save current INT 8 handler address (segment:offset) into ivt8_offset and ivt8_segment
+    mov dx, [es:IVT8_OFFSET_SLOT]
+    mov word [ivt8_offset], dx
+    mov dx, [es:IVT8_SEGMENT_SLOT]
+    mov word [ivt8_segment], dx
+	; 2. set new INT 8 handler address (OUR code's segment:offset)
+    mov ax, timer_isr
+	mov word [es:IVT8_OFFSET_SLOT], ax
+	mov ax, cs
+    mov word [es:IVT8_SEGMENT_SLOT], ax
+
+    ; 3. Set up threads
     call setup
+    
+    ; this is so that the comparison in yield between these two is easier.
+    ;sub word [num_threads], 1 ; make sure no tasks are added after this.
+    mov word [current_thread], 0
+
+    ; Have to manually set sp so that the stack pointer manager saves the right address for stack 2.
+    mov sp, 0x1100 - 0x10
+
+	; 4. reenable interrupts (GO!)
+    sti
+
+    ; 5. Switch to first task.
+    jmp first_yield
+
+timer_isr:
+    call yield
+
+    jmp	far [cs:ivt8_offset]
 
 yield:
     ; save first state registers
@@ -53,7 +85,7 @@ first_yield:
     pop bx
     pop ax
     ; jump into next state's function.
-    ret
+    iret
 
 ; Task setup function: reserves a given amount of spack for a "partition" on the stack.
 ; Order is:  ...top of stack|IP|REG|REG|REG|REG|REG|REG|LOCAL_SP|bottom of stack...
@@ -62,6 +94,11 @@ first_yield:
 ; cx is the location of the next function's first instruction.
 ; Changes given ax, bx, and cx.
 start_thread:
+    cmp ax, 0x1000
+    je .boat
+    push cs
+    pushf
+.boat:
     ; preserve original sp.
     mov [original_sp], sp
     ; move stack to the end of desired function's reserved stack.
@@ -105,14 +142,6 @@ setup:
     mov bx, 0x100
     mov cx, rainbow
     call start_thread
-
-    ; this is so that the comparison in yield between these two is easier.
-    ;sub word [num_threads], 1 ; make sure no tasks are added after this.
-    mov word [current_thread], 0
-
-    ; Have to manually set sp so that the stack pointer manager saves the right address for stack 2.
-    mov sp, 0x1100 - 0x10
-    jmp first_yield
 
     ret
 
@@ -204,7 +233,6 @@ input_function:
 
     ; Loop for input, displaying characters, until user presses enter.
 .loop:
-    call yield
 
     ; Take input; keep input in ah for duration of loop.
     mov ah, 0x00
@@ -425,7 +453,6 @@ rainbow:
 .looparino:
     push cx
 
-    call yield
 
     ;AH = 0C
     mov ah, 0x0c
@@ -1203,7 +1230,7 @@ _execute_rpn:
 	call	_pop_stack
 	mov		cx, ax
 	
-	push cx 		
+	push cx 
 	call	_pop_stack	
 	pop cx
 
@@ -1497,5 +1524,3 @@ section .data
 	int_number dw 0
 	int_number_pad dw 0
 	int_number_pad2 dw 0
-
-    

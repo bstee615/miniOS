@@ -1,0 +1,1 @@
+nasm -fbin -otim.com kernelnewtimed.asm && nasm -fbin -ombr.com boot.asm && mkfloppy.exe bootdisk.img mbr.com tim.com && ..\dbd\dbd.exe .

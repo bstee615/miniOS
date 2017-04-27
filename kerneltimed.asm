@@ -96,6 +96,8 @@ func5:
     jmp func5
 
 yield:
+    pushf
+    push cs
     ; save first state registers
     push ax
     push bx
@@ -128,7 +130,7 @@ first_yield:
     pop bx
     pop ax
     ; jump into next state's function.
-    ret
+    iret
 
 ; Task setup function: reserves a given amount of spack for a "partition" on the stack.
 ; Order is:  ...top of stack|IP|REG|REG|REG|REG|REG|REG|LOCAL_SP|bottom of stack...
