@@ -27,7 +27,7 @@ main:
     int 0x10
 
     ; Print
-    mov ah, 0x0a
+    mov ah, 0x09
     mov al, 219
     mov bl, 1
     mov cx, 1
@@ -59,7 +59,7 @@ main:
     inc si
     ;call survive
 
-    mov ah, 0x0a
+    mov ah, 0x09
     int 0x10
 
     jmp .looper
