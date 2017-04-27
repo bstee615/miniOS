@@ -13,7 +13,7 @@ main:
     mov al, 0x13
     int 0x10
 
-    call gol_setup
+    ;call gol_setup
 
     ; Move cursor
     ;AH = 02
@@ -33,7 +33,10 @@ main:
     mov cx, 1
 
     mov si, 0
+    
+    jmp end
 .looper:
+	call check_cells
     ; Move cursor
     mov ah, 0x02
     ; bl will now contain either black or blue.
@@ -175,9 +178,201 @@ search_cells:
 
     ret
 
+
+check_cells:
+	pusha
+	call copy_next_to_new
+	call clear_next
+	mov cx, 1
+	mov dx, 1
+	
+	.loop:
+	
+	call check_cell
+	call next_index
+	
+	cmp cx, 0
+	jne .loop
+	popa
+	
+	ret
+
+; takes cx and dx as row and column
+; and returns count in ax
+check_cell:
+	
+	
+	mov bx, 0
+	; to the right!
+		inc dx
+		call dbl_index
+		call check_index
+		add bx, ax
+
+	; up!
+		dec cx
+		call dbl_index
+		call check_index
+		add bx, ax
+
+	; left!
+		dec dx
+		call dbl_index
+		call check_index
+		add bx, ax
+		
+	; left!
+		dec dx
+		call dbl_index
+		call check_index
+		add bx, ax
+
+	; down!
+		inc cx
+		call dbl_index
+		call check_index
+		add bx, ax
+
+	; down!
+		inc cx
+		call dbl_index
+		call check_index
+		add bx, ax
+	
+	; right!
+		inc dx
+		call dbl_index
+		call check_index
+		add bx, ax
+
+	; right!
+		inc dx
+		call dbl_index
+		call check_index
+		add bx, ax
+		
+	;actual!
+		dec dx
+		dec cx
+		call dbl_index
+		call check_index
+		add bx, ax
+	
+	cmp ax, 1
+	jne .dead
+	
+	.live:
+	cmp bx, 2
+	jb .done
+	cmp bx, 3
+	ja .done
+	
+	jmp .regen
+	.dead:
+	cmp bx, 3
+	jne .done
+	
+	jmp .regen
+	
+	.regen:
+	
+	call dbl_index
+	mov bx, next_cells_array
+	add bx, ax
+	
+	mov byte [bx], 1
+	
+	jmp .end
+	
+	.done:
+
+	call dbl_index
+	mov bx, next_cells_array
+	add bx, ax
+	
+	mov byte [bx], 0
+	
+
+	.end:
+	
+	ret
+	
+
+; takes ax as parameter,
+; returns its checked state to ax
+check_index:
+	push bx
+	mov bx,ax
+	xor ax,ax
+	mov al, byte[cells_array + bx]
+	pop bx
+	ret
+
+; calculates index of arr[cx][dx]
+; assuming arr[25][20].
+; outputs index to ax
+    
+dbl_index:
+	mov ax, 25
+	imul ax, cx
+	add ax, dx
+	ret
+	
+; assuming we're at cx, dx
+; increments them to next indices
+; if cx = 0 then we're done.
+next_index:	
+	inc dx
+	cmp dx, 19
+	jne .done
+	mov dx, 1
+	inc cx
+	.done:
+	cmp cx, 24
+	jne .end
+	mov cx, 0
+	.end:
+	ret
+	
+copy_next_to_new:
+	push di
+	push bx
+	push ax
+	mov di, 0
+.loop:
+	mov bx, di
+	mov bl, byte [next_cells_array + bx]
+	mov al, bl
+	mov bx, di
+	mov byte [cells_array + bx], al
+	inc di
+	cmp di, 260
+	jne .loop
+	
+	pop di
+	ret
+
+clear_next:
+	push bx
+	push di
+	mov bx, next_cells_array
+	.loop:
+	mov byte[bx], 0
+	inc di
+	cmp di, 260
+	jne .loop
+	
+	pop di
+	pop bx
+	
+end:
+
+
+	
 section .data
     ; Theoretically organized into 25 lines of 20.
     cells_array times 260 db 0
+    next_cells_array times 260 db 0
 
     left        db 0
     right       db 0
