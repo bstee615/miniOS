@@ -399,34 +399,43 @@ next_index:
 	
 copy_next_to_new:
 	push di
+	push si
+    push ax
 	push bx
-	push ax
+    push cx
+
 	mov di, 0
-.loop:
-	mov bx, di
-	mov bl, byte [next_cells_array + bx]
-	mov al, bl
-	mov bx, di
-	mov byte [cells_array + bx], al
-	inc di
-	cmp di, 260
-	jne .loop
+
+    mov di, cells_array
+    mov si, next_cells_array
+    mov cx, 500
+.looper:
+    mov bx, cx
+    mov al, byte [si + bx]
+    mov byte [di + bx], al
+    loop .looper
 	
+    pop cx
+    pop bx
+    pop ax
+    pop si
 	pop di
 	ret
 
 clear_next:
-	push bx
-	push di
-	mov bx, next_cells_array
-	.loop:
-	mov byte[bx], 0
-	inc di
-	cmp di, 260
-	jne .loop
+	push cx
+	push si
+	mov si, next_cells_array
+    mov cx, 500
+.looper:
+	mov byte[si], 0
+	inc si
+	loop .looper
 	
-	pop di
-	pop bx
+	pop si
+	pop cx
+
+    ret
 	
 end:
 
