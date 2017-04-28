@@ -415,6 +415,7 @@ plot_function:
     loop .looper
 
 .end_func:
+    call yield
 
     mov ah, 0x00
     int 0x16
@@ -432,8 +433,6 @@ rainbow:
 .looparino:
     push cx
 
-    call yield
-
     ;AH = 0C
     mov ah, 0x0c
 	;AL = color value (XOR'ED with current pixel if bit 7=1)
@@ -441,7 +440,6 @@ rainbow:
     cmp al, 255
     jne .color_continue
     mov al, 0
-    call yield
 .color_continue:
     ;inc al ; Inc al after because al can only go up to 255.
 	;BH = page number, see VIDEO PAGES
@@ -457,11 +455,8 @@ rainbow:
     inc word [rainbow_y]
     cmp word [rainbow_y], 200
     jne .x_continue
-<<<<<<< HEAD
-    mov word [rainbow_y], 0
-=======
     mov word [rainbow_y], 100
->>>>>>> caf8b80eeb04a74c9e5ff580b487df353a2d790a
+    call yield
 .x_continue:
 	;DX = row number (zero based)
     mov dx, word [rainbow_y]
@@ -841,12 +836,9 @@ setup_menu:
 GRAPH_X_BOUND equ 160
 GRAPH_Y_BOUND equ 140
 setup_graph:
-<<<<<<< HEAD
-    ; Fill in the black parts of the graph
-=======
     pusha
 
->>>>>>> caf8b80eeb04a74c9e5ff580b487df353a2d790a
+    ; Fill in the black space for the graph.
     mov ah, 0x02
     mov bh, 0
     mov dl, 0

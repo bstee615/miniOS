@@ -9,33 +9,33 @@ X_START equ 21
 Y_START equ 0
 Y_BOUND equ 25
 main:
-    ; Switch to 320x200 video mode (i.e. mode 13h)
     mov ah, 0x00
     mov al, 0x13
     int 0x10
 
 	call print_grid
 ret
+
 print_grid:
-	push ax
-	mov ax, 0
-	
+	mov cx, 1
+	mov dx, 1
 	
 	.loop:
-		mov bx, cells_array
-		add bx, ax
-
-		cmp byte [bx], 1							
-		jne .nopr
-		
-		.pr:
-		
-		call dbl_index
-		push ax 
+	
+	push cx
+	push dx
+	
+	call dbl_index
+	call check_index
+	
+	cmp ax, 1
+	jne .npr
+	.pr:
+	
 		mov byte [row], cl
 		mov byte [col], dl
 		
-		mov ah, 0x13
+		mov ah, 0x9
 		mov al, 0x0
 		mov bh, 1
 		mov cx, 1
@@ -46,23 +46,22 @@ print_grid:
 		push bp
 
         push ax
-        mov ds, ax
+        mov ax, ds
 		mov es, ax
         pop ax
 
 		mov bp, on
 		
 		int 0x10
-								
-		jmp .nxt
-		.nopr:
 
-		call dbl_index
-		push ax 
+	
+	jmp .done
+	.npr:
+	
 		mov byte [row], cl
 		mov byte [col], dl
 		
-		mov ah, 0x13
+		mov ah, 0x9
 		mov al, 0x0
 		mov bh, 1
 		mov cx, 1
@@ -73,25 +72,26 @@ print_grid:
 		push bp
 
         push ax
-        mov ds, ax
+        mov ax, ds
 		mov es, ax
         pop ax
 
 		mov bp, off
 		
 		int 0x10
-		
-		.nxt:	
-		pop ax
-        inc ax
-		pop bp
-		pop es	
-		cmp ax,500
-		jne .loop
-		
-		pop ax
-	ret
 	
+	.done:
+	
+	pop dx
+	pop cx	
+	
+	call next_index
+	
+	cmp cx, 0
+	jne .loop
+	
+	
+	ret
 
 
 ; Tells whether a given cell in cells_array will live in next state.
@@ -323,6 +323,9 @@ check_cell:
 	.end:
 	
 	ret
+	
+
+;takes ax and returns cx and dx
 	
 
 ; takes ax as parameter,

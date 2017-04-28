@@ -1,6 +1,6 @@
 bits 16
 
-org 0x100
+org 0x0
 
 section .text
 
@@ -85,7 +85,7 @@ first_yield:
     pop bx
     pop ax
     ; jump into next state's function.
-    iret
+    ret
 
 ; Task setup function: reserves a given amount of spack for a "partition" on the stack.
 ; Order is:  ...top of stack|IP|REG|REG|REG|REG|REG|REG|LOCAL_SP|bottom of stack...
