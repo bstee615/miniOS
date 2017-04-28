@@ -9,14 +9,15 @@ X_START equ 21
 Y_START equ 0
 Y_BOUND equ 25
 main:
-
 	mov bx, next_cells_array
-	add bx, 0x59
-	mov byte[bx], 0x1
-	inc bx
-	mov byte[bx], 0x1
-	inc bx
-	mov byte[bx], 0x1
+	add bx, 0x56
+    mov byte [bx], 1
+    inc bx
+    mov byte [bx], 1
+    add bx, 20
+    mov byte [bx], 1
+    dec bx
+    mov byte [bx], 1
 	
 	mov ah, 0x0
 	mov al, 0x12
@@ -126,39 +127,6 @@ print_grid:
 	
 	ret
 
-
-; Tells whether a given cell in cells_array will live in next state.
-; Index is si.
-; Return value is 1 or 0 in bl.
-survive:
-    push dx
-
-    ; A cell C (number at si) is represented by a 1 when alive,
-    ; or 0 when dead, in an m-by-m (or m×m) square array of cells.
-    ; We calculate N - the sum of live cells in C's eight-location neighbourhood,
-    ; then cell C is alive or dead in the next generation based on the following table:
-    ;
-    ; C   N                 new C
-    ; 1   0,1             ->  0  # Lonely
-    ; 1   4,5,6,7,8       ->  0  # Overcrowded
-    ; 1   2,3             ->  1  # Lives
-    ; 0   3               ->  1  # It takes three to give birth!
-    ; 0   0,1,2,4,5,6,7,8 ->  0  # Barren
-    
-    call search_cells
-    cmp dl, 2
-    jl .dies
-    cmp dl, 3
-    jg .dies
-    ; Else he lives!
-    mov bl, 1
-    jmp .return
-.dies:
-    mov bl, 0
-.return:
-    pop dx
-    ret
-
 ; Takes a cell at si.
 ; Returns the number of live cells around it through dl.
 ; Kills nothing.
@@ -247,7 +215,6 @@ check_cells:
 	mov dx, 1
 	
 	.loop:
-	
 	call check_cell
 	call next_index
 	
@@ -351,7 +318,6 @@ check_cell:
 	add bx, ax
 	
 	mov byte [bx], 0
-	
 
 	.end:
 	
@@ -376,7 +342,7 @@ check_index:
 ; outputs index to ax
     
 dbl_index:
-	mov ax, 25
+	mov ax, 20
 	imul ax, cx
 	add ax, dx
 	ret

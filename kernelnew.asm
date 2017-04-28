@@ -5,8 +5,8 @@ org 0x0
 section .text
 
 main:
-	mov	ax, cs
-	mov	ds, ax
+    mov	ax, cs
+    mov	ds, ax
     ; Switch to 320x200 video mode (i.e. mode 13h)
     mov ah, 0x00
     mov al, 0x13
@@ -102,8 +102,13 @@ setup:
     call start_thread
 
     mov ax, 0x1300
-    mov bx, 0x100
+    mov bx, 0x300
     mov cx, rainbow
+    call start_thread
+
+    mov ax, 0x1600
+    mov bx, 0x300
+    mov cx, gol
     call start_thread
 
     ; this is so that the comparison in yield between these two is easier.
@@ -123,31 +128,31 @@ setup:
 ; clobbers nothing
 ; returns nothing
 puts:
-	push	ax
-	push	cx
-	push	si
+    push	ax
+    push	cx
+    push	si
     push    bx
-	
-	mov	ah, 0x0e
-	mov	cx, 1		; no repetition of chars
-	
-	mov	si, dx
+    
+    mov	ah, 0x0e
+    mov	cx, 1		; no repetition of chars
+    
+    mov	si, dx
 
     mov bh, 0
     mov bl, 150
 
 .loop:	mov	al, [si]
-	inc	si
-	cmp	al, 0
-	jz	.end
-	int	0x10
-	jmp	.loop
+    inc	si
+    cmp	al, 0
+    jz	.end
+    int	0x10
+    jmp	.loop
 .end:
     pop bx
-	pop	si
-	pop	cx
-	pop	ax
-	ret
+    pop	si
+    pop	cx
+    pop	ax
+    ret
 
 ; CALCULATOR!
 ;----------------------------------------
@@ -164,9 +169,9 @@ calculator:
 
 .ask_again:
     call input_function
-	
-	; copy input to calculator buffer
-	call copy_string_data
+    
+    ; copy input to calculator buffer
+    call copy_string_data
     ; TODO: After enter is pressed in input_function, print curvies.
     call plot_function
     jmp .ask_again
@@ -360,8 +365,8 @@ plot_function:
     ; TODO: Calculate y for all pixels.
 .looper:
 
-	mov bl, 0
-	mov byte [is_neg], bl
+    mov bl, 0
+    mov byte [is_neg], bl
     ; RPN Function should take a reference to a character array 
     ; and the length of the array, calculate the result, and return a number.
     ; This function should DEFINITELY NOT smash the char array.
@@ -369,7 +374,7 @@ plot_function:
 
     ; TODO: Save cx so that the count doesn't get screwed up.
     push cx
-	push word [coordinate_x]
+    push word [coordinate_x]
     ; TODO: Call RPN function to get the result of the equation(y_field character list).
     
     mov cx, word[coordinate_x]
@@ -378,26 +383,43 @@ plot_function:
     mov word [coordinate_y], ax
         
     ; is the output a negative number?
-	;; removed a bunch of adjusting code that wasn't working    
-	add word [coordinate_x], 80
-	mov bx, 70
-	sub bx, word [coordinate_y]
-	mov word [coordinate_y], bx 
+    ;; removed a bunch of adjusting code that wasn't working    
+    add word [coordinate_x], 80
+    mov bx, 70
+    ; Check whether y is negative.
+    mov ax, word [coordinate_y]
+    and ax, 0x8000
+    cmp ax, 0x0
+    je .pos                         ; If positive, transform coordinates to graph normally.
+    mov ax, word [coordinate_y]
+    neg ax                          ; Otherwise, offset y to make it display negative.
+    mov word [coordinate_y], ax
+
+    add bx, word [coordinate_y]
+    mov word [coordinate_y], bx
+
+    cmp word [coordinate_y], 140
+    ja .no_graph
+    jmp .donewithsign
+    .pos:
+    sub bx, word [coordinate_y]
+    mov word [coordinate_y], bx
 
     cmp word [coordinate_y], 70
     ja .no_graph
-	    
+        
+.donewithsign:
     ; TODO: Print the pixel in the appropriate place.
     ;AH = 0C
     mov ah, 0x0c
-	;AL = color value (XOR'ED with current pixel if bit 7=1)
+    ;AL = color value (XOR'ED with current pixel if bit 7=1)
     mov al, 0x26
-	;BH = page number, see VIDEO PAGES
+    ;BH = page number, see VIDEO PAGES
     mov bh, 0
 
-	;CX = column number (zero based)
+    ;CX = column number (zero based)
     mov cx, word [coordinate_x]
-	;DX = row number (zero based)
+    ;DX = row number (zero based)
     mov dx, word [coordinate_y]
     ; Don't forget to actually CALL int 0x10 :)
     int 0x10
@@ -435,16 +457,16 @@ rainbow:
 
     ;AH = 0C
     mov ah, 0x0c
-	;AL = color value (XOR'ED with current pixel if bit 7=1)
+    ;AL = color value (XOR'ED with current pixel if bit 7=1)
 
     cmp al, 255
     jne .color_continue
     mov al, 0
 .color_continue:
     ;inc al ; Inc al after because al can only go up to 255.
-	;BH = page number, see VIDEO PAGES
+    ;BH = page number, see VIDEO PAGES
     mov bh, 0
-	;CX = column number (zero based)
+    ;CX = column number (zero based)
     mov cx, word [rainbow_x]
 
     inc word [rainbow_x]
@@ -458,7 +480,7 @@ rainbow:
     mov word [rainbow_y], 100
     call yield
 .x_continue:
-	;DX = row number (zero based)
+    ;DX = row number (zero based)
     mov dx, word [rainbow_y]
     ; Don't forget to actually CALL int 0x10 :)
     int 0x10
@@ -1051,207 +1073,207 @@ _execute_rpn:
     push bx
     push cx
     push dx
-	
-	mov word [int_cur_num], cx
-	
-	mov di, 0
-	mov word [cur_index], di
+    
+    mov word [int_cur_num], cx
+    
+    mov di, 0
+    mov word [cur_index], di
 .topLoop:
-	
-	;cmp di, [ipt_len]
-	;ja .endloop
-	
-	mov di, word [cur_index]
-	call _rpn_get_char
-	mov word [cur_index], di
-	
-	mov bx,ax
+    
+    ;cmp di, [ipt_len]
+    ;ja .endloop
+    
+    mov di, word [cur_index]
+    call _rpn_get_char
+    mov word [cur_index], di
+    
+    mov bx,ax
 
-	mov byte [char_rem], bl
-		
-	cmp 	bl, 0
-	je		.endloop		
-	
-	cmp     bl, 'w'
-	je      .printItOut
-	
-	cmp		bl, byte '0'
-	jb      .ops
-	cmp		bl, byte '9'
-	ja      .ops
-	
-	sub		bl, byte '0'	
-	
-	mov		word [we_have_a_number_rejoice], word 1
+    mov byte [char_rem], bl
+        
+    cmp 	bl, 0
+    je		.endloop		
+    
+    cmp     bl, 'w'
+    je      .printItOut
+    
+    cmp		bl, byte '0'
+    jb      .ops
+    cmp		bl, byte '9'
+    ja      .ops
+    
+    sub		bl, byte '0'	
+    
+    mov		word [we_have_a_number_rejoice], word 1
 
-	xor dx,dx
-	mov dl, bl
-	
-	mov bx, dx
-	
-	mov		ax, word [int_number]		
-	
-	imul	ax,10
+    xor dx,dx
+    mov dl, bl
+    
+    mov bx, dx
+    
+    mov		ax, word [int_number]		
+    
+    imul	ax,10
 
-	add		ax, bx
-	
-	mov		word [int_number],ax
-	
-	jmp 	.topLoop
+    add		ax, bx
+    
+    mov		word [int_number],ax
+    
+    jmp 	.topLoop
 
 .hazUGotANumber:
 
-	mov 	ax, 0
-	
-	cmp		word [we_have_a_number_rejoice], ax
-	je		.opsin
+    mov 	ax, 0
+    
+    cmp		word [we_have_a_number_rejoice], ax
+    je		.opsin
 
-	
-	;push the number
-	push cx
-	mov		cx, word [int_number]
-	call	_push_stack
-	pop cx
+    
+    ;push the number
+    push cx
+    mov		cx, word [int_number]
+    call	_push_stack
+    pop cx
 
-	
-	mov		ax, 0
-	mov 	word [we_have_a_number_rejoice], 0
-	mov		word [int_number], 0
-	
-	jmp		.opsin
+    
+    mov		ax, 0
+    mov 	word [we_have_a_number_rejoice], 0
+    mov		word [int_number], 0
+    
+    jmp		.opsin
 .ops:
 
-	jmp		.hazUGotANumber
+    jmp		.hazUGotANumber
 .opsin:
-	
-	mov bl, byte [char_rem]	
-	cmp		bl, 'x'
-	je		.opsX
-	cmp		bl, '+'
-	je		.opsPlus
-	cmp		bl, '-'
-	je		.opsMinus
-	cmp		bl, '*'
-	je		.opsMul
-	cmp		bl, '/'
-	je		.opsDiv
-	cmp		bl, '~'
-	je		.opsNeg
-	
-	jmp .topLoop
+    
+    mov bl, byte [char_rem]	
+    cmp		bl, 'x'
+    je		.opsX
+    cmp		bl, '+'
+    je		.opsPlus
+    cmp		bl, '-'
+    je		.opsMinus
+    cmp		bl, '*'
+    je		.opsMul
+    cmp		bl, '/'
+    je		.opsDiv
+    cmp		bl, '~'
+    je		.opsNeg
+    
+    jmp .topLoop
 .printItOut:
-	
-	call	_print_stack
-	
-	jmp .topLoop
-	
+    
+    call	_print_stack
+    
+    jmp .topLoop
+    
 .opsPlus:
 
-	call	_pop_stack
-	mov		cx, ax
-	
-	push cx 
-	
-	call	_pop_stack
-	
-	pop cx
-	;ax
+    call	_pop_stack
+    mov		cx, ax
+    
+    push cx 
+    
+    call	_pop_stack
+    
+    pop cx
+    ;ax
 
-	
-	add		ax, cx
-	
-	push cx
-	mov cx, ax
-	call	_push_stack
-	pop cx
-	
-	jmp		.topLoop
-	
+    
+    add		ax, cx
+    
+    push cx
+    mov cx, ax
+    call	_push_stack
+    pop cx
+    
+    jmp		.topLoop
+    
 .opsMinus:
-	
-	call	_pop_stack
-	mov		cx, ax
-	push cx
-	call	_pop_stack
-	pop cx
-	;ax
-	
-	sub		ax, cx
-	push cx
-	mov cx,	ax
-	call	_push_stack
-	pop cx
-	
-	jmp		.topLoop
-	
+    
+    call	_pop_stack
+    mov		cx, ax
+    push cx
+    call	_pop_stack
+    pop cx
+    ;ax
+    
+    sub		ax, cx
+    push cx
+    mov cx,	ax
+    call	_push_stack
+    pop cx
+    
+    jmp		.topLoop
+    
 .opsNeg:
-	
-	call	_pop_stack
-	;ax
-	
-	neg		ax
-	push cx
-	mov cx,	ax
-	call	_push_stack
-	pop cx
-	
-	jmp		.topLoop
+    
+    call	_pop_stack
+    ;ax
+    
+    neg		ax
+    push cx
+    mov cx,	ax
+    call	_push_stack
+    pop cx
+    
+    jmp		.topLoop
 
 .opsMul:
 
 
-	call	_pop_stack
-	mov		cx, ax
-	
-	push cx 
-	
-	call	_pop_stack
-	
-	pop cx
-	;ax
-	
-	imul	ax, cx
-	
-	
-	push cx
-	mov cx,	ax
-	call	_push_stack
-	pop cx
-	
-	jmp		.topLoop
+    call	_pop_stack
+    mov		cx, ax
+    
+    push cx 
+    
+    call	_pop_stack
+    
+    pop cx
+    ;ax
+    
+    imul	ax, cx
+    
+    
+    push cx
+    mov cx,	ax
+    call	_push_stack
+    pop cx
+    
+    jmp		.topLoop
 
 .opsDiv:
 
 
-	call	_pop_stack
-	mov		cx, ax
-	
-	push cx 		
-	call	_pop_stack	
-	pop cx
+    call	_pop_stack
+    mov		cx, ax
+    
+    push cx 		
+    call	_pop_stack	
+    pop cx
 
-	;ax
-	
-	cdq
-	idiv	cx
-	
-	
-	push cx
-	mov cx,	ax
-	call	_push_stack
-	pop cx
-	
-	jmp		.topLoop
+    ;ax
+    
+    cdq
+    idiv	cx
+    
+    
+    push cx
+    mov cx,	ax
+    call	_push_stack
+    pop cx
+    
+    jmp		.topLoop
 
 
 .opsX:
-	
-	push cx
-	mov cx, word [int_cur_num]
-	call _push_stack
-	pop cx
-	
-	jmp .topLoop
+    
+    push cx
+    mov cx, word [int_cur_num]
+    call _push_stack
+    pop cx
+    
+    jmp .topLoop
 
 .endloop:
     ;cmp word [we_have_a_number_rejoice], 1
@@ -1260,7 +1282,7 @@ _execute_rpn:
     ;call _push_stack
 
 .endfunc:
-	call _pop_stack
+    call _pop_stack
 
     pop dx
     pop cx
@@ -1269,177 +1291,517 @@ _execute_rpn:
     pop si
 
     ret
-	
+    
 ; dx is position in buffer
 ; returns ax = 0 if there is no more space in buffer
 ; otherwise returns character
 _rpn_get_char:
-	push bx
-	mov bx,di
-	movzx ax, byte [rpn_buff + bx]
+    push bx
+    mov bx,di
+    movzx ax, byte [rpn_buff + bx]
 
-	inc di
-	pop bx
-	
-	ret
-	
+    inc di
+    pop bx
+    
+    ret
+    
 
 ; cx is what to push
 _push_stack: 
-		
-		; [bp+8]   == what to push
-		mov   ax, word [int_top_stack]
-		
-		cmp	 	ax, 200
-		je		.mod
-		jmp		.cont
+        
+        ; [bp+8]   == what to push
+        mov   ax, word [int_top_stack]
+        
+        cmp	 	ax, 200
+        je		.mod
+        jmp		.cont
 .mod:
-		
-		mov		ax, 0
-		jmp 	.conti
-		
-		
+        
+        mov		ax, 0
+        jmp 	.conti
+        
+        
 .cont:
-		
-		add		ax, 1
+        
+        add		ax, 1
 .conti:
-		mov word [int_top_stack], ax
-		
-		;cmp ax, 0
-		;jb .notzero
-		
-		;mov ax, word 0
+        mov word [int_top_stack], ax
+        
+        ;cmp ax, 0
+        ;jb .notzero
+        
+        ;mov ax, word 0
 
-		
+        
 .notzero:		
-		
-		push bx
-		mov bx, ax
-		add bx,bx
-		mov		word [rpn_stack+bx], cx
-		
-		pop bx
-		
-		mov		word [int_top_stack], ax
+        
+        push bx
+        mov bx, ax
+        add bx,bx
+        mov		word [rpn_stack+bx], cx
+        
+        pop bx
+        
+        mov		word [int_top_stack], ax
 
         ret
 
 ; Pops off value from stack to ax
 ; or exits with grace if the stack is empty.
 _pop_stack: 
-		
-		push bx
-		push dx
-		; pop into ax
-		
-		mov		bx, word [int_top_stack]
+        
+        push bx
+        push dx
+        ; pop into ax
+        
+        mov		bx, word [int_top_stack]
 
-		
-		cmp		bx, 200
-		je		.bad
-		
-		push bx
-		add bx,bx
-		mov		ax, word [rpn_stack+bx]
-		pop bx
-		
-		cmp		bx, 0
-		ja		.dec
-		
-		mov		bx,	201
-		jmp		.dec
+        
+        cmp		bx, 200
+        je		.bad
+        
+        push bx
+        add bx,bx
+        mov		ax, word [rpn_stack+bx]
+        pop bx
+        
+        cmp		bx, 0
+        ja		.dec
+        
+        mov		bx,	201
+        jmp		.dec
 
 .dec:		
-		add 	bx, -1
-		mov		word [int_top_stack], bx
-		
-		
-		jmp 	.end
+        add 	bx, -1
+        mov		word [int_top_stack], bx
+        
+        
+        jmp 	.end
 
 .bad:
 
-		mov dx,str_err_pattern
-		call puts
-		
+        mov dx,str_err_pattern
+        call puts
+        
 .end:
-	   pop dx
-	   pop bx
-	   ret
-	   
+       pop dx
+       pop bx
+       ret
+       
 ; Attempts to print the top of the stack
 _print_stack:
-		push ax
-		push bx
-		push cx
-		push dx
-		push di
-		call	_pop_stack
-		mov    bx, ax
-		push ax
-		
-		
-		
+        push ax
+        push bx
+        push cx
+        push dx
+        push di
+        call	_pop_stack
+        mov    bx, ax
+        push ax
+        
+        
+        
 
-		mov dx, bx
-		
-		mov di, 0
-		.beg:
-			rol dx,4 
-			mov cx, dx
-			and cx, 0xf
-			mov	ah, 0x0e
-			
-			mov bx, cx
-			mov al, byte [digits + bx]
-			int 0x10
-			
-			inc di
-			cmp di, 4
-			jne .beg			
-		
-		pop ax		
-		mov cx,	ax
-		call	_push_stack
-			
-		pop di
-		pop dx	
-		pop cx
-		pop bx
-		pop ax
-		ret
+        mov dx, bx
+        
+        mov di, 0
+        .beg:
+            rol dx,4 
+            mov cx, dx
+            and cx, 0xf
+            mov	ah, 0x0e
+            
+            mov bx, cx
+            mov al, byte [digits + bx]
+            int 0x10
+            
+            inc di
+            cmp di, 4
+            jne .beg			
+        
+        pop ax		
+        mov cx,	ax
+        call	_push_stack
+            
+        pop di
+        pop dx	
+        pop cx
+        pop bx
+        pop ax
+        ret
 
 
-	
+    
 ; copy y field data to rpn buffer
 copy_string_data:
-	pusha
+    pusha
 
-	mov dx, y_field
-	mov bx, rpn_buff
-	
-	mov di, 1
-	.begcpy:
-		; address of y-field
-		mov bx, y_field
-		; current reading point
-		add bx, di
-		mov al, byte[bx]
-		
-		; go to the right point in rpn
-		mov bx, rpn_buff
+    mov dx, y_field
+    mov bx, rpn_buff
+    
+    mov di, 1
+    .begcpy:
+        ; address of y-field
+        mov bx, y_field
+        ; current reading point
+        add bx, di
+        mov al, byte[bx]
+        
+        ; go to the right point in rpn
+        mov bx, rpn_buff
         dec di
-		add bx, di
+        add bx, di
         inc di
-		mov byte[bx], al
-		
-		inc di
-		cmp di, 16
-		jne .begcpy
-	
-	
-	popa
-	ret
-	
+        mov byte[bx], al
+        
+        inc di
+        cmp di, 16
+        jne .begcpy
+    
+    
+    popa
+    ret
+    
+X_BOUND equ 20
+X_START equ 20
+Y_START equ 0
+Y_BOUND equ 13
+gol:
+    ; Create initial shapes (finally, the fun part :)
+    ; Pulsar
+    mov bx, next_cells_array
+    add bx, 85
+    mov byte [bx], 1
+    add bx, 19
+    mov byte [bx], 1
+    inc bx
+    mov byte [bx], 1
+    inc bx
+    mov byte [bx], 1
+    ; Glider
+    mov bx, next_cells_array
+    add bx, 214
+    mov byte [bx], 1
+    sub bx, 21
+    mov byte [bx], 1
+    sub bx, 20
+    mov byte [bx], 1
+    inc bx
+    mov byte [bx], 1
+    inc bx
+    mov byte [bx], 1
+    ; Toad
+    mov bx, next_cells_array
+    add bx, 56
+    mov byte [bx], 1
+    inc bx
+    mov byte [bx], 1
+    inc bx
+    mov byte [bx], 1
+    add bx, 17
+    mov byte [bx], 1
+    inc bx
+    mov byte [bx], 1
+    inc bx
+    mov byte [bx], 1
+    
+    .loop:
+    
+    call check_cells
+
+    call print_grid
+    
+    call yield    
+    
+    jmp .loop
+    
+    
+ret
+
+print_grid:
+    mov cx, 1
+    mov dx, 1
+    
+    .loop:
+    
+    push cx
+    push dx
+    
+    call dbl_index
+    call check_index
+    
+    cmp ax, 1
+    jne .npr
+    .pr:
+    
+        mov byte [row], cl
+        mov byte [col], dl
+        
+        ;AH = 02
+        mov ah, 0x2
+        mov bh, 0x0
+        ;BH = page number (0 for graphics modes)
+        ;DH = row
+        mov dh, byte[row]
+        ;DL = column
+        mov dl, byte[col]
+        add dl, X_START
+
+        int 0x10
+        
+        ;AH = 09
+        mov ah, 0x9
+        ;AL = ASCII character to write
+        mov al, 'o'
+        ;BH = display page  (or mode 13h, background pixel value)
+        mov bh, 0
+        ;BL = character attribute (text) foreground color (graphics)
+        mov bl, 0x3
+        ;CX = count of characters to write (CX >= 1)
+        mov cx, 1
+        
+        int 0x10
+
+    
+    jmp .done
+    .npr:
+    
+        mov byte [row], cl
+        mov byte [col], dl
+        
+        ;AH = 02
+        mov ah, 0x2
+        mov bh, 0x0
+        ;BH = page number (0 for graphics modes)
+        ;DH = row
+        mov dh, byte[row]
+        ;DL = column
+        mov dl, byte[col]
+        add dl, X_START
+        
+        int 0x10
+        
+        ;AH = 09
+        mov ah, 0x9
+        ;AL = ASCII character to write
+        mov al, '`'
+        ;BH = display page  (or mode 13h, background pixel value)
+        mov bh, 0
+        ;BL = character attribute (text) foreground color (graphics)
+        mov bl, 0x3
+        ;CX = count of characters to write (CX >= 1)
+        mov cx, 1
+        
+        int 0x10
+    
+    .done:
+    
+    pop dx
+    pop cx	
+    
+    call next_index
+    
+    cmp cx, 0
+    jne .loop
+    
+    
+    ret
+
+; Master method to run through one entire iteration.
+check_cells:
+    pusha
+    call copy_next_to_new
+    call clear_next
+    mov cx, 1
+    mov dx, 1
+    
+    .loop:
+    call check_cell
+    call next_index
+    
+    cmp cx, 0
+    jne .loop
+    popa
+    
+    ret
+
+; takes cx and dx as row and column
+; and returns count in ax
+check_cell:
+    mov bx, 0
+    ; to the right!
+        inc dx
+        call dbl_index
+        call check_index
+        add bx, ax
+
+    ; up!
+        dec cx
+        call dbl_index
+        call check_index
+        add bx, ax
+
+    ; left!
+        dec dx
+        call dbl_index
+        call check_index
+        add bx, ax
+        
+    ; left!
+        dec dx
+        call dbl_index
+        call check_index
+        add bx, ax
+
+    ; down!
+        inc cx
+        call dbl_index
+        call check_index
+        add bx, ax
+
+    ; down!
+        inc cx
+        call dbl_index
+        call check_index
+        add bx, ax
+    
+    ; right!
+        inc dx
+        call dbl_index
+        call check_index
+        add bx, ax
+
+    ; right!
+        inc dx
+        call dbl_index
+        call check_index
+        add bx, ax
+        
+    ;actual!
+        dec dx
+        dec cx
+        call dbl_index
+        call check_index
+    
+    ; Decide whether the cell lives or dies. Very dense, don't check this code again.
+    cmp ax, 1
+    jne .dead
+    
+    .live:
+    cmp bx, 2
+    jb .done
+    cmp bx, 3
+    ja .done
+    
+    jmp .regen
+    .dead:
+    cmp bx, 3
+    jne .done
+    
+    jmp .regen
+    
+    .regen:
+    call dbl_index
+    mov bx, next_cells_array
+    add bx, ax
+    
+    mov byte [bx], 1
+    
+    jmp .end
+    
+    .done:
+    call dbl_index
+    mov bx, next_cells_array
+    add bx, ax
+    
+    mov byte [bx], 0
+
+    .end:
+    
+    ret
+    
+
+;takes ax and returns cx and dx
+    
+
+; takes ax as parameter,
+; returns its checked state to ax
+check_index:
+    push bx
+    mov bx,ax
+    xor ax,ax
+    movzx ax, byte[cells_array + bx]
+    pop bx
+    ret
+
+; calculates index of arr[cx][dx]
+; assuming arr[25][20].
+; outputs index to ax
+dbl_index:
+    mov ax, X_BOUND
+    imul ax, cx
+    add ax, dx
+    ret
+    
+; assuming we're at cx, dx
+; increments them to next indices
+; if cx = 0 then we're done.
+next_index:	
+    inc dx
+    cmp dx, X_BOUND - 1
+    jne .done
+    mov dx, 1
+    inc cx
+    .done:
+    cmp cx, Y_BOUND - 1
+    jne .end
+    mov cx, 0
+    .end:
+    ret
+    
+; Should probably be named copy_next_to_current
+; copies next_cells_array completely over to cells_array
+copy_next_to_new:
+    push di
+    push si
+    push ax
+    push bx
+    push cx
+
+    mov di, 0
+
+    mov di, cells_array
+    mov si, next_cells_array
+    mov cx, 240
+.looper:
+    mov bx, cx
+    mov al, byte [si + bx]
+    mov byte [di + bx], al
+    loop .looper
+    
+    pop cx
+    pop bx
+    pop ax
+    pop si
+    pop di
+    ret
+
+clear_next:
+    push cx
+    push si
+    mov si, next_cells_array
+    mov cx, 240
+.looper:
+    mov byte[si], 0
+    inc si
+    loop .looper
+    
+    pop si
+    pop cx
+
+    ret
+    
+end:
 
 
 
@@ -1495,30 +1857,49 @@ section .data
     
     
     digits		db	"0123456789abcdef",10,0
-	counter		dw	0
-	ivt8_offset	dw	0
-	ivt8_segment	dw	0
-	msg_finish	db	"Enter an empty string to quit...", 10, 13, 10, 13, 0
-	msg_prompt	db	"What is your name? ", 0
-	msg_hello	db	"RPN Demo",10, 0
-	rpn_buff	times 100 db 0
-	input_buff	times 32 db 0
-	rpn_stack	times 32 dw 0
-	str_err_pattern db "STACK UNDERFLOW",0x0e, 0x0a,0
-	char_rem db 0
+    counter		dw	0
+    ivt8_offset	dw	0
+    ivt8_segment	dw	0
+    msg_finish	db	"Enter an empty string to quit...", 10, 13, 10, 13, 0
+    msg_prompt	db	"What is your name? ", 0
+    msg_hello	db	"RPN Demo",10, 0
+    rpn_buff	times 100 db 0
+    input_buff	times 32 db 0
+    rpn_stack	times 32 dw 0
+    str_err_pattern db "STACK UNDERFLOW",0x0e, 0x0a,0
+    char_rem db 0
 
-	ipt_len dw 0
-	cur_index dw 0
+    ipt_len dw 0
+    cur_index dw 0
 
-	int_cur_num dw 0
-	sad_fish	dw	0
-	int_top_stack dw 200
-	int_unumber	dw 0
-	bool_have_number dw 0
-	we_have_a_number_rejoice dw 0
-	int_number_pad3 dw 0
-	int_number dw 0
-	int_number_pad dw 0
-	int_number_pad2 dw 0
+    int_cur_num dw 0
+    sad_fish	dw	0
+    int_top_stack dw 200
+    int_unumber	dw 0
+    bool_have_number dw 0
+    we_have_a_number_rejoice dw 0
+    int_number_pad3 dw 0
+    int_number dw 0
+    int_number_pad dw 0
+    int_number_pad2 dw 0
 
+; Game Of Life!
+    ; Theoretically organized into 25 lines of 20.
+    cells_array times 240 db 0
+    next_cells_array times 240 db 0
+
+    left        db 0
+    right       db 0
+    up          db 0
+    down        db 0
+    topleft     db 0
+    topright    db 0
+    bottomleft  db 0
+    bottomright db 0
     
+    
+    row db 0
+    col db 0
+    
+    on db "O",0
+    off db "X",0
