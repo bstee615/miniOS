@@ -1556,7 +1556,7 @@ print_grid:
         ;BH = display page  (or mode 13h, background pixel value)
         mov bh, 0
         ;BL = character attribute (text) foreground color (graphics)
-        mov bl, 0x3
+        mov bl, 0x4
         ;CX = count of characters to write (CX >= 1)
         mov cx, 1
         

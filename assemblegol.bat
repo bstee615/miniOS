@@ -1,1 +1,0 @@
-nasm -fbin -ogol.com gol.asm && ..\dbd\dbd.exe .
