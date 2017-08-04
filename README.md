@@ -12,7 +12,7 @@ It'll always hold a special place in my heart as my first intensive group effort
 
 =====TO RUN THE PROGRAM=====
 1. Extract the contents of this .ZIP folder onto your computer.
-2. Navigate to \miniOS-release-pkg-2017 and run assemblekernelnew.bat.
+2. Navigate to \miniOS-release-pkg-2017 and run "run.bat".
 3. For advanced instructions if you are NOT running Windows:
   - Run a shell and navigate to \miniOS-release-pkg-2017
   - Run this command: "..\dbd\dbd.exe ."
