@@ -12,11 +12,11 @@ It'll always hold a special place in my heart as my first intensive group effort
 
 =====TO RUN THE PROGRAM=====
 1. Extract the contents of this .ZIP folder onto your computer.
-2. Navigate to \miniOS-release-pkg-2017 and run assemblekernelnew.bat.
+2. Navigate to "\miniOS-release-pkg-2017\miniOS" and run "run.bat".
 3. For advanced instructions if you are NOT running Windows:
-  - Run a shell and navigate to \miniOS-release-pkg-2017
+  - Run a shell and navigate to "\miniOS-release-pkg-2017\miniOS".
   - Run this command: "..\dbd\dbd.exe ."
-  - After DosBox pops up, run "BOOT BOOTDISK.IMG".
+  - After DosBox pops up, enter "BOOT BOOTDISK.IMG".
   - Voila! If that doesn't work then fiddle with it and you should get it.
   
 Sorry that these instructions are really condescending - they're targeted towards beginners and I want to cover every base.
