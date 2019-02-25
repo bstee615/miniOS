@@ -1,7 +1,7 @@
-# miniOS
+# miniOS, or BenjiZealOS
 CpS 230 operating system team project
 
-## STORY OF MY LIFE
+## Story of My Life
 miniOS was a project for my CpS 230 Computer Systems class, taken Spring of 2017.
 I worked on it with Jacob Brazeal, a great guy and solid programmer.
 We spent way too much time on bugs my grandmother would have caught, but it was a learning experience.
@@ -10,7 +10,7 @@ This project was the most fun and frustration that I have felt in any programmin
 Thank you for looking at and sharing in this project - I am glad for it to see the light of day again.
 It'll always hold a special place in my heart as my first intensive group effort.
 
-## TO RUN THE PROGRAM
+## To Run:
 1. Extract the contents of this .ZIP folder onto your computer.
 2. Navigate to "\miniOS-release-pkg-2017\miniOS" and run "run.bat".
 ### Advanced instructions if you are NOT running Windows:
@@ -19,7 +19,7 @@ It'll always hold a special place in my heart as my first intensive group effort
   - After DosBox pops up, enter "BOOT BOOTDISK.IMG".
   - Voila! If that doesn't work then fiddle with it and you should get it.
 
-## PROGRAM SPECIFICATIONS
+## Program Specifications
   miniOS is written completely in NASM. It took place over a period of three weeks (read: 5 stressful sprints and the rest of the time spent in anxiety.)
 The program is a miniature version of a multitasking operating system. It currently runs three tasks:
   - calc - a graphing calculator that uses Reverse Polish Notation for its operation.
